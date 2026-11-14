@@ -20,9 +20,9 @@ export interface Step {
   end: number;
 }
 
-/** "1:05", "12:40", "1:02:03". (A length a hair under a second, as a stream reports 77.99 for 1:18, rounds up.) */
+/** "1:05", "12:40", "1:02:03": whole seconds down, as Video.js's own time display counts them, so the two agree. */
 export function clock(seconds: number): string {
-  const s = Math.max(0, Math.floor(seconds + 0.05));
+  const s = Math.max(0, Math.floor(seconds));
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   const r = String(s % 60).padStart(2, '0');

@@ -76,7 +76,9 @@ test('seeks by clicking the time slider and by the arrow keys', async ({ page })
 test('shows the time: where the film is and how long it runs', async ({ page }) => {
   await runAndHold(page, 20.4);
   await expect(page.locator('.media-time-current-value')).toHaveText('0:20');
-  await expect(page.locator('.media-time-duration-value')).toHaveText('1:18');
+  // The film's own length, as the player counts it (whole seconds down): 1:18 from the file, 1:17 from Mux's MP4 (77.98 s).
+  const length = await page.evaluate(() => Math.floor(document.querySelector('video')!.duration));
+  await expect(page.locator('.media-time-duration-value')).toHaveText(`${Math.floor(length / 60)}:${String(length % 60).padStart(2, '0')}`);
   await expect(page.locator('.media-time-current-value')).toBeVisible();
   await expect(page.locator('.media-time-duration-value')).toBeVisible();
 });
