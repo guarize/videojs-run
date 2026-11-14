@@ -34,7 +34,7 @@ Run is HTML and CSS around Video.js 10 (`src/video/skin.html`, `src/video/skin.t
 </style>
 ```
 
-`apps/preview/src/run/mount.ts` mounts it in one call (`mount(host, film)`), with the sources tried in order: a stream where the browser plays HLS itself (Safari, Chrome and Edge 142+), a file elsewhere. No HLS library is loaded.
+`apps/preview/src/run/mount.ts` mounts it in one call (`mount(host, film)`), with the sources tried in order: Mux’s stream where the browser plays HLS itself (Safari, Chrome and Edge 142+), Mux’s MP4 elsewhere (Firefox), and a copy on the site last. No HLS library is loaded.
 
 ## Develop
 
@@ -42,7 +42,7 @@ Run is HTML and CSS around Video.js 10 (`src/video/skin.html`, `src/video/skin.t
 pnpm install
 pnpm dev            # http://127.0.0.1:4480/run.html (the skin alone) and the Video.js workbench at /
 pnpm site:dev       # the showcase site, http://127.0.0.1:4484
-pnpm film:fallback  # the film's MP4 for Firefox (needs ffmpeg)
+pnpm film:fallback  # the site's own copy of the film, a last fallback (needs ffmpeg)
 pnpm test:e2e       # Chromium, WebKit and Firefox
 ```
 

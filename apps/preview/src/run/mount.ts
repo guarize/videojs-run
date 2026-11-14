@@ -23,7 +23,8 @@ export const RUN_FILM_ID = 'UsmJTpl8YMgQ4cUqgV4quA02h88lALtK88k4vAnSyoYY';
 
 export function runFilm(base = './'): Film {
   return {
-    sources: [`https://stream.mux.com/${RUN_FILM_ID}.m3u8`, `${base}film/film-720.mp4`],
+    // Mux's stream where the browser plays HLS itself, Mux's MP4 where it doesn't (Firefox), this site's copy last.
+    sources: [`https://stream.mux.com/${RUN_FILM_ID}.m3u8`, `https://stream.mux.com/${RUN_FILM_ID}/highest.mp4`, `${base}film/film-720.mp4`],
     poster: `${base}film/poster.jpg`,
     chapters: `${base}film/chapters.vtt`,
     captions: `${base}film/captions.vtt`,

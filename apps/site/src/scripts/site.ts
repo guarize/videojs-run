@@ -86,7 +86,7 @@ form?.addEventListener('submit', (event) => {
   if (chapters) made.push(chapters);
   stage.hidden = false;
   mount(stage, {
-    sources: [`https://stream.mux.com/${id}.m3u8`, `https://stream.mux.com/${id}/highest.mp4`, `https://stream.mux.com/${id}/capped-1080p.mp4`],
+    sources: [`https://stream.mux.com/${id}.m3u8`, `https://stream.mux.com/${id}/highest.mp4`],
     poster: `https://image.mux.com/${id}/thumbnail.webp?time=1`,
     chapters,
     prompt: prompt || undefined,
