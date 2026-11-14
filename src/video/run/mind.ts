@@ -77,8 +77,11 @@ export class RnMindElement extends HTMLElement {
     const duration = run.video.duration;
     if (down && (!slider || !slider.width || !Number.isFinite(duration) || duration <= 0)) return;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
+    // The drawing's box: the player's, and on a phone the pad under it too (run.css, "The pad": its margin).
+    const pad = container.hasAttribute('data-rn-pad') ? Number.parseFloat(getComputedStyle(container).marginBottom) || 0 : 0;
+    const height = box.height + pad;
     canvas.width = Math.round(box.width * dpr);
-    canvas.height = Math.round(box.height * dpr);
+    canvas.height = Math.round(height * dpr);
     const ctx = canvas.getContext('2d')!;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
@@ -161,7 +164,7 @@ export class RnMindElement extends HTMLElement {
     const font = `11px ${getComputedStyle(container).getPropertyValue('--rn-mono').trim() || 'monospace'}`;
     const draw = (now: number) => {
       const t = (now - began) / MIND_MS;
-      ctx.clearRect(0, 0, box.width, box.height);
+      ctx.clearRect(0, 0, box.width, height);
       // The whole drawing comes up quickly and goes over its last fifth.
       const fade = Math.min(1, t / 0.08) * (1 - ease((t - 0.8) / 0.2));
       ctx.lineCap = 'round';
@@ -276,7 +279,7 @@ export class RnMindElement extends HTMLElement {
       ctx.globalAlpha = 1;
       if (t < 1) this.#frame = requestAnimationFrame(draw);
       else {
-        ctx.clearRect(0, 0, box.width, box.height);
+        ctx.clearRect(0, 0, box.width, height);
         this.removeAttribute('data-on');
         container.removeAttribute('data-rn-mind');
         this.#frame = 0;

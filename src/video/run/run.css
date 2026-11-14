@@ -65,6 +65,9 @@
     border-radius: var(--rn-r-card);
     overflow: hidden;
     container-type: inline-size;
+    /* The film's own shape (run.ts reads it from the film), and 16:9 until the film has said: a video that hasn't
+       loaded is 2:1, so the player, and on a phone the pad under it, would move as the film opens. */
+    aspect-ratio: var(--rn-ratio, 16 / 9);
   }
 
   @media (pointer: coarse) {
@@ -226,7 +229,7 @@
     transition: opacity var(--rn-base) var(--rn-ease), translate var(--rn-base) var(--rn-ease);
   }
 
-  .rn .video-controls-content:not([data-visible]) .video-controls-bottom {
+  .rn:not([data-rn-pad]) .video-controls-content:not([data-visible]) .video-controls-bottom {
     translate: 0 8px;
   }
 
@@ -351,8 +354,8 @@
     transition: opacity var(--rn-base) var(--rn-ease);
   }
 
-  .rn .video-controls-content:not([data-visible]) .video-controls-bottom:has(rn-log[data-caption]),
-  .rn .video-controls-content:not([data-visible]) .video-controls-bottom:has(rn-log[data-done]) {
+  .rn:not([data-rn-pad]) .video-controls-content:not([data-visible]) .video-controls-bottom:has(rn-log[data-caption]),
+  .rn:not([data-rn-pad]) .video-controls-content:not([data-visible]) .video-controls-bottom:has(rn-log[data-done]) {
     opacity: 1;
     translate: none;
     pointer-events: none;
@@ -367,27 +370,27 @@
     overflow: hidden;
   }
 
-  .rn .video-controls-content:not([data-visible]) .video-controls-bottom:has(rn-log[data-caption]) :is(.video-controls-slider-row, .video-controls-row),
-  .rn .video-controls-content:not([data-visible]) .video-controls-bottom:has(rn-log[data-done]) :is(.video-controls-slider-row, .video-controls-row) {
+  .rn:not([data-rn-pad]) .video-controls-content:not([data-visible]) .video-controls-bottom:has(rn-log[data-caption]) :is(.video-controls-slider-row, .video-controls-row),
+  .rn:not([data-rn-pad]) .video-controls-content:not([data-visible]) .video-controls-bottom:has(rn-log[data-done]) :is(.video-controls-slider-row, .video-controls-row) {
     display: none;
   }
 
-  .rn .video-controls-content:not([data-visible]) rn-log .rn-log-step {
+  .rn:not([data-rn-pad]) .video-controls-content:not([data-visible]) rn-log .rn-log-step {
     display: inline;
     flex: none;
     color: var(--rn-signal-own);
   }
 
-  .rn .video-controls-content:not([data-visible]) rn-log .rn-log-prompt {
+  .rn:not([data-rn-pad]) .video-controls-content:not([data-visible]) rn-log .rn-log-prompt {
     display: none;
   }
 
-  .rn .video-controls-content:not([data-visible]) rn-log .rn-log-line {
+  .rn:not([data-rn-pad]) .video-controls-content:not([data-visible]) rn-log .rn-log-line {
     -webkit-line-clamp: 1;
   }
 
   /* The step's progress, a brass thread along the pill's foot. */
-  .rn .video-controls-content:not([data-visible]) .video-controls-bottom::after {
+  .rn:not([data-rn-pad]) .video-controls-content:not([data-visible]) .video-controls-bottom::after {
     content: "";
     position: absolute;
     left: 0;
@@ -1696,7 +1699,7 @@
 
   /* Down (a phone): while the network runs to the track, the bar is only its track, so the network has the player
      from the prompt to the steps' marks; the log and the keys come back as it ends. */
-  .rn[data-rn-mind="down"] .video-controls-bottom {
+  .rn[data-rn-mind="down"]:not([data-rn-pad]) .video-controls-bottom {
     background-color: transparent;
     border-color: transparent;
     transition: background-color 400ms var(--rn-ease), border-color 400ms var(--rn-ease);
@@ -2399,7 +2402,7 @@
     }
 
     /* Before the run on a phone, the prompt and its Run key are the whole screen: no bar under them. */
-    .rn[data-rn-prompted]:not([data-rn-started]) .video-controls-bottom {
+    .rn[data-rn-prompted]:not([data-rn-started], [data-rn-pad]) .video-controls-bottom {
       display: none;
     }
 
@@ -2521,6 +2524,36 @@
     padding-inline: 16px 20px;
   }
 
+  /* On a short player the log becomes the track, so the bar is one row shorter and the picture keeps the room: the
+     line is written over the track, and under it a thread of the film's progress with a caret where the run is. A
+     touch, a pointer or keyboard focus on the track brings its tokens and its playhead back, and the line steps
+     aside (the rule below). While the network runs down to the track, the tokens stay. */
+  .rn[data-rn-short]:not([data-rn-mind], [data-rn-pad]) .video-controls-content[data-visible] rn-log {
+    position: absolute;
+    inset-block-start: 8px;
+    inset-inline: 12px;
+    height: 24px;
+    align-items: center;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .rn[data-rn-short]:not([data-rn-mind], [data-rn-pad]) .video-controls-content[data-visible] .media-time-slider:not([data-pointing], [data-dragging]):not(:has(.media-time-slider-thumb:focus-visible)) :is(rn-tokens, .media-time-slider-thumb) {
+    opacity: 0;
+  }
+
+  .rn[data-rn-short]:not([data-rn-mind], [data-rn-pad]) .video-controls-content[data-visible] .media-time-slider:not([data-pointing], [data-dragging]):not(:has(.media-time-slider-thumb:focus-visible))::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: 1px;
+    height: 7px;
+    pointer-events: none;
+    background:
+      linear-gradient(to right, transparent calc(var(--media-slider-fill, 0%) - 1px), var(--rn-signal-own) calc(var(--media-slider-fill, 0%) - 1px), var(--rn-signal-own) calc(var(--media-slider-fill, 0%) + 1px), transparent calc(var(--media-slider-fill, 0%) + 1px)) 0 0 / 100% 100% no-repeat,
+      linear-gradient(to right, var(--rn-signal-own) var(--media-slider-fill, 0%), var(--rn-text-3) var(--media-slider-fill, 0%)) 0 100% / 100% 2px no-repeat;
+  }
+
   /* Dragging on a short player, the preview says the line: the log row steps aside under it. */
   .rn[data-rn-short]:has(media-time-slider[data-dragging]) rn-log,
   .rn[data-rn-short]:has(media-time-slider[data-pointing]) rn-log {
@@ -2528,10 +2561,72 @@
   }
 
   /* Opened over a short player, the bar steps back so the sheet has the room. */
-  .rn:has(> .rn-sheet:not([hidden])) .video-controls-bottom,
-  .rn[data-rn-short][data-rn-comparing] .video-controls-bottom {
+  .rn:not([data-rn-pad]):has(> .rn-sheet:not([hidden])) .video-controls-bottom,
+  .rn[data-rn-short][data-rn-comparing]:not([data-rn-pad]) .video-controls-bottom {
     opacity: 0;
     pointer-events: none;
+  }
+
+  /* ---- The pad (data-rn-pad, run.ts): a phone's player in the page ------------------------------------------- */
+
+  /* The picture is the film's alone. The bar leaves it and hangs under it as the player's lower part, one card with
+     the picture: the log, the track and the keys, always there. A margin holds its room in the page, so whatever
+     shape the page gives the picture stays the picture's. Where the two meet, a brass thread shows the step's progress,
+     the thread the pill carries elsewhere. Sheets (the palette, Reasoning, the plan) still open over the picture. */
+  .media-skin.rn[data-rn-pad] {
+    --rn-pad-h: 128px;
+    overflow: visible;
+    margin-block-end: var(--rn-pad-h);
+    border-end-start-radius: 0;
+    border-end-end-radius: 0;
+    clip-path: inset(0 0 calc(-1 * var(--rn-pad-h)) 0 round var(--rn-r-card));
+  }
+
+  .rn[data-rn-pad] .video-controls-backdrop {
+    display: none;
+  }
+
+  .rn[data-rn-pad] .video-controls-bottom {
+    position: absolute;
+    inset: 100% 0 auto;
+    width: auto;
+    max-width: none;
+    height: var(--rn-pad-h);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 12px 12px;
+    border: 0;
+    border-radius: 0;
+    background-color: var(--rn-ink);
+    opacity: 1;
+    translate: none;
+    pointer-events: auto;
+    visibility: visible;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  .rn[data-rn-pad] .video-controls-bottom::after {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 2px;
+    background: linear-gradient(to right, var(--rn-signal-own) calc(var(--rn-run-progress, 0) * 100%), var(--rn-hairline) calc(var(--rn-run-progress, 0) * 100%));
+    pointer-events: none;
+  }
+
+  /* The network runs on down into the pad, to the steps' marks on its track. */
+  .rn[data-rn-pad] rn-mind {
+    inset-block-end: calc(-1 * var(--rn-pad-h));
+  }
+
+  /* The plan, opened from its key, has the whole picture to lie on. */
+  .rn[data-rn-pad] rn-plan {
+    max-height: calc(100% - 2 * var(--rn-gap));
   }
 
   /* ---- Filling the window where the page can't have fullscreen (iPhone) --------------------------------------- */

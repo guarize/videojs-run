@@ -12,8 +12,9 @@ import { choiceOf, type SourceChoice } from './sources';
 
 let ids = 0;
 
-/** "0.4 s", "1.2 s", "12 s". */
+/** "38 ms", "0.4 s", "1.2 s", "12 s": a wait under a tenth of a second in whole milliseconds, never "0.0 s". */
 export function seconds(ms: number): string {
+  if (ms < 100) return `${Math.max(1, Math.round(ms))} ms`;
   const s = ms / 1000;
   return s < 10 ? `${s.toFixed(1)} s` : `${Math.round(s)} s`;
 }
@@ -181,10 +182,10 @@ export class RnReasoningElement extends HTMLElement {
     const took = performance.now() - this.#asked;
     this.#asked = 0;
     // A seek answered within a frame or two was no wait: it is not counted, and the last real one stands (or, if
-    // there is none yet, the player says it waited for nothing to speak of).
+    // there is none yet, the player says how few milliseconds it took; a clock that didn't move leaves "Ready").
     if (took < 50) {
       this.toggleAttribute('data-thinking', false);
-      if (!this.#thought) this.#label(`Thought for ${seconds(took)}`);
+      if (!this.#thought && took >= 1) this.#label(`Thought for ${seconds(took)}`);
       return;
     }
     // The first wait counts as one; every one after is a stall or a seek the player waited on.

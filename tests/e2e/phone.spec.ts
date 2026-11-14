@@ -27,14 +27,26 @@ test.describe('phone', () => {
     await expect(container(page)).toHaveAttribute('data-rn-started', '');
   });
 
-  test('the bar and every key on it fit inside the player', async ({ page }) => {
+  test('the bar hangs under the picture, covering none of it, and every key on it fits inside the player', async ({ page }) => {
     await open(page);
+    // The pad is there from the first paint, so nothing moves when the run starts.
+    await expect(container(page)).toHaveAttribute('data-rn-pad', '');
+    const before = await page.locator('.video-controls-bottom').boundingBox();
     await page.locator('.rn-center-play').tap();
     await expect.poll(async () => (await media(page)).time, { timeout: 20_000 }).toBeGreaterThan(0.5);
     await page.evaluate(() => (document.querySelector('video') as HTMLVideoElement).pause());
-    await expect(container(page)).toHaveAttribute('data-controls-visible', '');
-    const out = await page.evaluate(() => {
+    expect(await page.locator('.video-controls-bottom').boundingBox(), 'the pad, before and after the run starts').toEqual(before);
+    const cover = await page.evaluate(() => {
       const c = document.querySelector('media-container')!.getBoundingClientRect();
+      const b = document.querySelector('.video-controls-bottom')!.getBoundingClientRect();
+      return Math.max(0, c.bottom - b.top);
+    });
+    expect(cover, 'px of the picture under the bar').toBe(0);
+    const out = await page.evaluate(() => {
+      const box = document.querySelector('media-container')!.getBoundingClientRect();
+      const pad = Number.parseFloat(getComputedStyle(document.querySelector('media-container')!).marginBottom) || 0;
+      // The player is the picture and the pad under it: one card.
+      const c = { left: box.left, right: box.right, top: box.top, bottom: box.bottom + pad };
       const parts = [document.querySelector('.video-controls-bottom')!, ...document.querySelectorAll('.video-controls-row .media-button, .video-controls-row button, media-time-slider')];
       return parts
         .filter((el) => (el as HTMLElement).checkVisibility?.() ?? true)

@@ -57,6 +57,52 @@ export function stateOf(index: number, current: number, ended: boolean): StepSta
 
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+/** Under this width a player in the page is a phone's, and its bar hangs under the picture (`data-rn-pad`). */
+const PAD_UNDER = 480;
+
+/**
+ * Whether the page leaves the pad its room under the player: the margin that holds it isn't cut by a box of fixed
+ * height around the player, and nothing in the page's flow stands in it. A page that holds the player in a box of
+ * fixed height keeps the bar over the picture, rather than over whatever the page puts next.
+ */
+function hasRoomUnder(container: HTMLElement): boolean {
+  const box = container.getBoundingClientRect();
+  const pad = Number.parseFloat(getComputedStyle(container).marginBottom) || 0;
+  if (pad < 1) return false;
+  const foot = box.bottom + pad;
+  for (let parent = container.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
+    const style = getComputedStyle(parent);
+    if (style.display === 'contents') continue;
+    if (/hidden|clip|auto|scroll/.test(style.overflowY) && parent.getBoundingClientRect().bottom < foot - 1) return false;
+  }
+  // What comes next in the page, in the flow: the first few boxes after the player.
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
+  walker.currentNode = container;
+  let seen = 0;
+  for (let node: Node | null = walker.nextSibling() ?? nextOutside(walker); node && seen < 24; node = walker.nextNode()) {
+    const el = node as HTMLElement;
+    if (el.contains(container)) continue;
+    const style = getComputedStyle(el);
+    if (style.display === 'none' || style.display === 'contents' || style.position === 'absolute' || style.position === 'fixed' || style.visibility === 'hidden') continue;
+    const r = el.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) continue;
+    seen++;
+    const beside = r.right <= box.left + 1 || r.left >= box.right - 1;
+    if (!beside && r.top < foot - pad / 2 && r.bottom > box.bottom + 1 && r.top >= box.top) return false;
+  }
+  return true;
+}
+
+/** The next element after the walker's current one that is not inside it. */
+function nextOutside(walker: TreeWalker): Node | null {
+  for (let n: Node | null = walker.currentNode; n; n = n.parentNode) {
+    walker.currentNode = n;
+    const sibling = walker.nextSibling();
+    if (sibling) return sibling;
+  }
+  return null;
+}
+
 /** The run's state, shared by its parts: one per container. */
 class Run extends EventTarget {
   steps: Step[] = [];
@@ -76,8 +122,37 @@ class Run extends EventTarget {
     this.video = video;
     // How tall the player is, for what opens over it: under 420 px (a phone held upright, a small embed) the
     // palette, Reasoning and the before-and-after open as sheets inside it, and the track's preview drops its frame.
-    const measure = () => container.toggleAttribute('data-rn-short', container.clientHeight > 0 && container.clientHeight < 420);
+    // And on a phone's player in the page (under 480 px wide, not filling the screen), the bar leaves the picture: it
+    // hangs under it as the player's lower part (`data-rn-pad`, run.css "The pad"), where the page has kept the room.
+    let roomFor = -1;
+    let roomy = true;
+    const measure = () => {
+      container.toggleAttribute('data-rn-short', container.clientHeight > 0 && container.clientHeight < 420);
+      const width = container.clientWidth;
+      if (!width) return;
+      const screen = container.hasAttribute('data-rn-fill') || document.fullscreenElement === container || (document as Document & { webkitFullscreenElement?: Element }).webkitFullscreenElement === container;
+      let pad = width < PAD_UNDER && !screen;
+      if (pad) {
+        // Asked again only when the width changes: the margin that holds the pad's room is on while it's asked.
+        if (roomFor !== width) {
+          container.toggleAttribute('data-rn-pad', true);
+          roomy = hasRoomUnder(container);
+          roomFor = width;
+        }
+        pad = roomy;
+      } else roomFor = -1;
+      if (container.hasAttribute('data-rn-pad') !== pad) container.toggleAttribute('data-rn-pad', pad);
+    };
+    // The player keeps the film's own shape (run.css, `--rn-ratio`), read from the film as soon as it is known.
+    const shape = () => {
+      if (video.videoWidth && video.videoHeight) container.style.setProperty('--rn-ratio', `${video.videoWidth} / ${video.videoHeight}`);
+    };
+    video.addEventListener('loadedmetadata', shape);
+    video.addEventListener('resize', shape);
+    shape();
     new ResizeObserver(measure).observe(container);
+    new MutationObserver(measure).observe(container, { attributes: true, attributeFilter: ['data-rn-fill'] });
+    for (const type of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(type, measure);
     measure();
     const update = () => this.#update();
     for (const type of ['timeupdate', 'seeked', 'seeking', 'loadedmetadata', 'durationchange', 'emptied']) video.addEventListener(type, update);
