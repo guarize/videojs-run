@@ -7,7 +7,7 @@
  */
 import { execFileSync } from 'node:child_process';
 
-const ID = 'UsmJTpl8YMgQ4cUqgV4quA02h88lALtK88k4vAnSyoYY';
+const ID = 'z4nhqMYV9VxUXiRIAQkuLrSE19PiaQ02YR73QI26y8YQ';
 const input = process.argv[2] ?? `https://stream.mux.com/${ID}/highest.mp4`;
 execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', input, '-vf', 'scale=-2:720', '-c:v', 'libx264', '-preset', 'slow', '-crf', '23', '-pix_fmt', 'yuv420p', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709', '-movflags', '+faststart', '-c:a', 'aac', '-b:a', '128k', 'apps/preview/public/film/film-720.mp4'], { stdio: 'inherit' });
 console.log('apps/preview/public/film/film-720.mp4');

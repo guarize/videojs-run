@@ -4,7 +4,7 @@ export { expect } from '@playwright/test';
 
 /**
  * The battery's `test`. Every page in every context it makes mutes each film as the film starts to load (a test that
- * checks mute then unmutes it on purpose; neither source carries an audio track). Every spec imports `test` from
+ * checks mute unmutes it on purpose, with the film paused, so nothing sounds). Every spec imports `test` from
  * here, never from `@playwright/test`.
  */
 export const MUTE_ON_LOAD = () => {

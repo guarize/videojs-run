@@ -61,4 +61,6 @@ Node 22 or later. `pnpm site:stills` retakes the site’s pictures from the real
 
 Film: *Visualising AI* by Google DeepMind (Wes Cockx, Zünc Studio, Twistedpoly, Martina Stiftinger), via Pexels; streamed from Mux. Its chapters and captions were written for this skin. Nothing here implies endorsement by Google DeepMind.
 
+Music: [*Shadows and Dust*](https://www.scottbuckley.com.au/library/shadows-and-dust/) by Scott Buckley, released under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), mixed under the film.
+
 Made by [Gua](https://gua.studio). Licensed under Apache 2.0 (`LICENSE`, `NOTICE`).

@@ -10,9 +10,9 @@ import { defineConfig, devices } from '@playwright/test';
  * own: global-setup.ts fails the run with a clear message when nothing answers there.
  *
  * The page plays the film from Mux (HLS) where the browser has HLS of its own (Chromium, WebKit) and from the local
- * file where it has none (Firefox), so the three engines cover both sources. Neither source carries an audio track,
- * and every film is muted as it starts to load (support/test.ts), Chromium also with --mute-audio and Firefox with
- * its own volume at nothing.
+ * file where it has none (Firefox), so the three engines cover both sources. Both carry the film's music, and every
+ * film is muted as it starts to load (support/test.ts), Chromium also with --mute-audio and Firefox with its own
+ * volume at nothing: nothing plays sound in a test.
  *
  * Browsers come from ~/.playwright-browsers; nothing is downloaded. Firefox needs a home of its own on this Mac
  * (CFFIXED_USER_HOME, an empty folder) and its sandboxes off, set here for its worker processes.

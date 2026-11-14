@@ -136,7 +136,7 @@ export const playground = {
   title: { lead: 'Try it on ', em: 'your own film.' } satisfies Title,
   body: 'Paste a Mux playback ID, write the prompt and the steps, and Run plays it. Nothing leaves this page.',
   fields: {
-    id: { label: 'Mux playback ID', placeholder: 'UsmJTpl8YMgQ4cUqgV4quA02h88lALtK88k4vAnSyoYY' },
+    id: { label: 'Mux playback ID', placeholder: 'z4nhqMYV9VxUXiRIAQkuLrSE19PiaQ02YR73QI26y8YQ' },
     prompt: { label: 'Prompt', placeholder: 'Walk through the new dashboard' },
     steps: { label: 'Steps, one per line', placeholder: '0:00 Open the app\n0:12 Connect a source\n0:40 Ask a question' },
   },
@@ -174,6 +174,6 @@ export const evidence = {
 };
 
 export const credits = {
-  film: 'Film: <cite>Visualising AI</cite> by Google DeepMind (Wes Cockx, Zünc Studio, Twistedpoly, Martina Stiftinger), via Pexels. Captions and chapters written for this page.',
+  film: 'Film: <cite>Visualising AI</cite> by Google DeepMind (Wes Cockx, Zünc Studio, Twistedpoly, Martina Stiftinger), via Pexels. Captions and chapters written for this page. Music: <a href="https://www.scottbuckley.com.au/library/shadows-and-dust/"><cite>Shadows and Dust</cite></a> by Scott Buckley, released under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.',
   made: 'Made by <a href="https://gua.studio">Gua</a> for the Video.js Skins Design Challenge, November 2026. Apache 2.0.',
 };
