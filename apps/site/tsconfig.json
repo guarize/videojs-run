@@ -1,0 +1,7 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "paths": { "@/*": ["../../src/*"], "@preview/*": ["../preview/src/*"] }
+  },
+  "include": ["src", "../../src", "../preview/src/run"]
+}

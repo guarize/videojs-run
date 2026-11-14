@@ -1,0 +1,157 @@
+---
+/**
+ * The Run page, laid out as a run: its sections are the steps of a plan, and the side index marks each as waiting,
+ * reading or read, the way the player marks its steps. Every picture is a capture of the real player
+ * (scripts/site-stills.mjs); every number is measured (scripts/measure.mjs).
+ */
+import Base from '../layouts/Base.astro';
+import { credits, evidence, hero, masthead, plan, playground, site, steps, use, type Title } from '../content/copy';
+import measured from '../content/measured.json';
+
+const all = [...steps.map((s) => ({ id: s.id, name: s.name })), { id: 'playground', name: playground.name }, { id: 'use', name: use.name }, { id: 'measured', name: evidence.name }];
+const two = (n: number) => String(n).padStart(2, '0');
+const title = (t: Title) => `${t.lead}${t.em ? `<em>${t.em}</em>` : ''}`;
+const tests = measured.tests;
+const engines = (tests?.engines ?? []).map((e: string) => ({ chromium: 'Chromium', webkit: 'WebKit', firefox: 'Firefox' })[e] ?? e).join(', ');
+---
+
+<Base>
+  <a class="skip" href="#player">{hero.skip}</a>
+  <header class="masthead">
+    <a class="brand" href={masthead.brand.href} aria-label={masthead.brand.label}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.8 2.2h14.4a2.6 2.6 0 0 1 2.6 2.6v14.4a2.6 2.6 0 0 1-2.6 2.6H4.8a2.6 2.6 0 0 1-2.6-2.6V4.8a2.6 2.6 0 0 1 2.6-2.6Z" fill="none" stroke="currentColor" stroke-width="1.6"></path><path d="M9.5 8.2v7.6l6-3.8z" fill="currentColor"></path></svg>
+      <span>{masthead.brand.name}</span>
+    </a>
+    <nav class="links" aria-label={masthead.nav}>
+      {masthead.links.map((link) => <a href={link.href}>{link.label}</a>)}
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="title">
+      <div class="hero-head">
+        <div>
+          <p class="eyebrow" set:html={hero.eyebrow} />
+          <h1 id="title" set:html={title(hero.title)} />
+        </div>
+        <p class="lede">{hero.lede}</p>
+      </div>
+      <div class="player-host" id="player" tabindex="-1">
+        <img class="player-poster" src="/film/poster.jpg" alt="" width="1920" height="1080" fetchpriority="high" decoding="async" />
+      </div>
+      <p class="try"><b>{hero.try.label}</b> <span class="try-wide" set:html={hero.try.wide} /><span class="try-phone">{hero.try.phone}</span></p>
+    </section>
+
+    <div class="run">
+      <nav class="index" aria-label={plan.label}>
+        <p class="index-head"><span>{plan.label}</span><span class="index-count" aria-hidden="true">0/{all.length}</span></p>
+        <ol>
+          {
+            all.map((s, i) => (
+              <li>
+                <a href={`#${s.id}`} data-step={s.id}>
+                  <span class="index-mark" aria-hidden="true" />
+                  <span class="index-name">{s.name}</span>
+                  <span class="index-n" aria-hidden="true">{two(i + 1)}</span>
+                </a>
+              </li>
+            ))
+          }
+        </ol>
+      </nav>
+
+      <div class="steps">
+        {
+          steps.map((s, i) => (
+            <article class="step" id={s.id} aria-labelledby={`${s.id}-title`}>
+              <div class="step-text">
+                <p class="kicker"><span class="kicker-n">{two(i + 1)}</span>{s.kicker}</p>
+                <h2 id={`${s.id}-title`} set:html={title(s.title)} />
+                {s.body.map((p) => <p set:html={p} />)}
+              </div>
+              <figure class="still">
+                <img src={`/${s.still.src}`} alt={s.still.alt} width={s.still.width} height={s.still.height} loading="lazy" decoding="async" />
+              </figure>
+            </article>
+          ))
+        }
+
+        <section class="step step-wide" id="playground" aria-labelledby="playground-title">
+          <div class="step-text">
+            <p class="kicker"><span class="kicker-n">{two(steps.length + 1)}</span>{playground.kicker}</p>
+            <h2 id="playground-title" set:html={title(playground.title)} />
+            <p>{playground.body}</p>
+          </div>
+          <form class="playground" id="playground-form" novalidate>
+            <label class="field">
+              <span>{playground.fields.id.label}</span>
+              <input name="id" type="text" inputmode="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder={playground.fields.id.placeholder} aria-describedby="id-error" />
+              <span class="field-error" id="id-error" hidden>{playground.errors.id}</span>
+            </label>
+            <label class="field">
+              <span>{playground.fields.prompt.label}</span>
+              <input name="prompt" type="text" autocomplete="off" placeholder={playground.fields.prompt.placeholder} />
+            </label>
+            <label class="field field-wide">
+              <span>{playground.fields.steps.label}</span>
+              <textarea name="steps" rows="4" spellcheck="false" placeholder={playground.fields.steps.placeholder} aria-describedby="steps-error"></textarea>
+              <span class="field-error" id="steps-error" hidden>{playground.errors.steps}</span>
+            </label>
+            <button class="button" type="submit">{playground.submit}</button>
+          </form>
+          <div class="player-host playground-player" id="playground-player" hidden></div>
+        </section>
+
+        <section class="step step-wide" id="use" aria-labelledby="use-title">
+          <div class="step-text">
+            <p class="kicker"><span class="kicker-n">{two(steps.length + 2)}</span>{use.kicker}</p>
+            <h2 id="use-title" set:html={title(use.title)} />
+            {use.body.map((p) => <p set:html={p} />)}
+          </div>
+          <div class="code">
+            <button class="code-copy" type="button" data-copy="use-code">Copy</button>
+            <pre id="use-code"><code>{use.code}</code></pre>
+          </div>
+        </section>
+
+        <section class="step step-wide" id="measured" aria-labelledby="measured-title">
+          <div class="step-text">
+            <p class="kicker"><span class="kicker-n">{two(steps.length + 3)}</span>{evidence.kicker}</p>
+            <h2 id="measured-title" set:html={title(evidence.title)} />
+          </div>
+          <dl class="evidence">
+            {tests && (
+              <div>
+                <dt>{tests.passed} of {tests.passed + tests.failed}</dt>
+                <dd>browser tests pass in {engines}: play, seek, time, volume, fullscreen, captions, the keys, a phone’s layout.</dd>
+              </div>
+            )}
+            {tests && tests.failed === 0 && (
+              <div>
+                <dt>0</dt>
+                <dd>axe violations (WCAG 2.1 AA) at the start and while running, in every engine: part of the tests above.</dd>
+              </div>
+            )}
+            <div>
+              <dt>{measured.kB.js} + {measured.kB.css}&nbsp;kB</dt>
+              <dd>of script and style, gzipped, Video.js 10 included. No HLS library: each browser plays the stream itself, or a file.</dd>
+            </div>
+            <div>
+              <dt>44&nbsp;px</dt>
+              <dd>every control on a touch screen; one Tab stop each, with a ring you can see. Under reduced motion, nothing moves by itself.</dd>
+            </div>
+          </dl>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="colophon">
+    <p set:html={credits.film} />
+    <p set:html={credits.made} />
+  </footer>
+
+  <script>
+    import '../scripts/site';
+  </script>
+</Base>

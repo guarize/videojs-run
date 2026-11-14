@@ -1,0 +1,16 @@
+{
+  "kB": {
+    "js": 83.3,
+    "css": 15.6
+  },
+  "tests": {
+    "passed": 42,
+    "failed": 0,
+    "engines": [
+      "chromium",
+      "webkit",
+      "firefox"
+    ],
+    "at": "2026-11-14"
+  }
+}

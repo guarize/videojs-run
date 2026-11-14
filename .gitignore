@@ -1,0 +1,17 @@
+
+# Hosting CLIs keep their project links here.
+*.local
+.DS_Store
+.env*
+.netlify
+.vercel
+.wrangler
+dist
+media-src
+node_modules
+playwright-report
+test-results
+apps/preview/public/film/*.mp4
+scratch
+apps/site/.astro
+apps/site/dist

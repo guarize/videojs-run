@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <title>Run · skin test page</title>
+    <style>
+      html { background: #0b0c09; color: #eef1e6; color-scheme: dark; }
+      body { margin: 0; padding: 24px 16px 96px; display: grid; place-items: start center; }
+      #player { width: min(100%, 1080px); }
+      #player:empty { aspect-ratio: 16 / 9; }
+      :root[data-bare] body { padding: 0; }
+      :root[data-bare] #player { width: 100%; }
+    </style>
+  </head>
+  <body>
+    <main id="player"></main>
+    <script type="module" src="/src/run/main.ts"></script>
+  </body>
+</html>
