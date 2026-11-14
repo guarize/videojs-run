@@ -245,8 +245,10 @@ h2 em {
   filter: brightness(0.32) saturate(0.6);
 }
 
-.player-host video-player {
+.player-host video-player,
+.player-host media-container {
   display: block;
+  height: 100%;
 }
 
 .try {

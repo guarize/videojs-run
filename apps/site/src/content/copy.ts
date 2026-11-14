@@ -41,7 +41,7 @@ export const hero = {
   skip: 'Skip to the player',
   eyebrow: '<span>Run</span> · a skin for Video.js&nbsp;10',
   title: { lead: 'Every film, ', em: 'played as a run.' } satisfies Title,
-  lede: 'A player for AI tools and the sites that sell them. The film’s chapters become a plan, its captions a log, and the player shows its own reasoning. Nothing on it pretends a model is running.',
+  lede: 'A player for AI tools. Chapters become the plan, captions the log.',
   try: {
     label: 'Try it.',
     wide: 'Press <kbd>Run</kbd>, then drag along the track. <kbd>⌘K</kbd> opens every command.',

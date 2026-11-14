@@ -188,6 +188,10 @@
     opacity: 0;
     scale: 0.5;
     rotate: -90deg;
+  }
+
+  /* The turn answers a press only: nothing moves as the page loads. */
+  .rn[data-rn-started] .media-play-button .media-button-icon-base {
     transition: opacity var(--rn-base) var(--rn-ease), scale var(--rn-slow) var(--rn-ease), rotate var(--rn-slow) var(--rn-ease);
   }
 
@@ -2039,6 +2043,32 @@
     content: "";
     position: absolute;
     inset: -12px -10px;
+  }
+
+  /* On a touch screen there is no Escape key to name: the key is a close mark. */
+  .rn .rn-palette-esc-x {
+    display: none;
+    width: 14px;
+    height: 14px;
+  }
+
+  @media (pointer: coarse) {
+    .rn .rn-palette-esc {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border-radius: var(--rn-r-control);
+    }
+
+    .rn .rn-palette-esc-word {
+      display: none;
+    }
+
+    .rn .rn-palette-esc-x {
+      display: block;
+    }
   }
 
   .rn .rn-palette-esc:focus-visible {

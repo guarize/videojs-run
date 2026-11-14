@@ -56,7 +56,7 @@ export class RnPaletteElement extends HTMLElement {
         <div class="rn-palette-field">
           <span class="rn-palette-prompt" aria-hidden="true">›</span>
           <input class="rn-palette-input" type="text" role="combobox" aria-expanded="true" aria-autocomplete="list" aria-controls="${id}-list" aria-label="Type a command" placeholder="Type a command" autocomplete="off" spellcheck="false" enterkeyhint="go">
-          <button type="button" class="rn-palette-esc" aria-label="Close commands">esc</button>
+          <button type="button" class="rn-palette-esc" aria-label="Close commands"><span class="rn-palette-esc-word">esc</span><svg class="rn-palette-esc-x" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
         </div>
         <div class="rn-palette-list" id="${id}-list" role="listbox" aria-label="Commands"></div>
         <p class="rn-palette-empty" hidden>No command matches</p>
