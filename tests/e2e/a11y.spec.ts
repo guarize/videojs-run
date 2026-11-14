@@ -24,5 +24,7 @@ test('no violations while running, with the controls up', async ({ page }) => {
   await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.4);
   await expect(container(page)).toHaveAttribute('data-controls-visible', '');
   expect((await media(page)).paused).toBe(false);
+  // Once the log line's words have come in (each arrives from transparent; a scan mid-arrival measures a fade).
+  await page.waitForFunction(() => (document.querySelector('rn-log')?.getAnimations({ subtree: true }).length ?? 0) === 0);
   expect(await scan(page)).toEqual([]);
 });

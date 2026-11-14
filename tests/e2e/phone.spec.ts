@@ -31,11 +31,19 @@ test.describe('phone', () => {
     await open(page);
     // The pad is there from the first paint, so nothing moves when the run starts.
     await expect(container(page)).toHaveAttribute('data-rn-pad', '');
-    const before = await page.locator('.video-controls-bottom').boundingBox();
+    // Measured against the player (the test page's own type may still be settling above it).
+    const shape = () =>
+      page.evaluate(() => {
+        const c = document.querySelector('media-container')!.getBoundingClientRect();
+        const b = document.querySelector('.video-controls-bottom')!.getBoundingClientRect();
+        // Whole pixels: the film's own ratio may differ from the 16:9 held for it by a hair of rounding.
+        return { picture: [c.width, c.height].map(Math.round), pad: [b.left - c.left, b.top - c.top, b.width, b.height].map(Math.round) };
+      });
+    const before = await shape();
     await page.locator('.rn-center-play').tap();
     await expect.poll(async () => (await media(page)).time, { timeout: 20_000 }).toBeGreaterThan(0.5);
     await page.evaluate(() => (document.querySelector('video') as HTMLVideoElement).pause());
-    expect(await page.locator('.video-controls-bottom').boundingBox(), 'the pad, before and after the run starts').toEqual(before);
+    expect(await shape(), 'the picture and the pad, before and after the run starts').toEqual(before);
     const cover = await page.evaluate(() => {
       const c = document.querySelector('media-container')!.getBoundingClientRect();
       const b = document.querySelector('.video-controls-bottom')!.getBoundingClientRect();

@@ -164,8 +164,8 @@ export class RnTokensElement extends HTMLElement {
     ctx.clearRect(0, 0, width, height);
     const styles = getComputedStyle(this);
     const brass = styles.getPropertyValue('--rn-signal-own').trim() || '#c9ae78';
-    const ink = styles.getPropertyValue('--rn-track').trim() || '#2b323d';
-    const buffer = styles.getPropertyValue('--rn-buffer').trim() || '#46505e';
+    const ink = styles.getPropertyValue('--rn-track').trim() || '#636b78';
+    const buffer = styles.getPropertyValue('--rn-buffer').trim() || '#7a828f';
     const paper = styles.getPropertyValue('--rn-text').trim() || '#e9e6df';
     const duration = video.duration;
     if (!Number.isFinite(duration) || duration <= 0) return;

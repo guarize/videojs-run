@@ -12,6 +12,7 @@ const all = [...steps.map((s) => ({ id: s.id, name: s.name })), { id: 'playgroun
 const two = (n: number) => String(n).padStart(2, '0');
 const title = (t: Title) => `${t.lead}${t.em ? `<em>${t.em}</em>` : ''}`;
 const tests = measured.tests;
+const proofs = measured.proofs;
 const engines = (tests?.engines ?? []).map((e: string) => ({ chromium: 'Chromium', webkit: 'WebKit', firefox: 'Firefox' })[e] ?? e).join(', ');
 ---
 
@@ -136,10 +137,27 @@ const engines = (tests?.engines ?? []).map((e: string) => ({ chromium: 'Chromium
               <dt>{measured.kB.js} + {measured.kB.css}&nbsp;kB</dt>
               <dd>of script and style, gzipped, Video.js 10 included. No HLS library: each browser plays the stream itself, or a file.</dd>
             </div>
-            <div>
-              <dt>44&nbsp;px</dt>
-              <dd>every control on a touch screen; one Tab stop each, with a ring you can see. Under reduced motion, nothing moves by itself.</dd>
-            </div>
+            {proofs && proofs.passed ? (
+              <>
+                <div>
+                  <dt>{proofs.text.toFixed(2)}&nbsp;:&nbsp;1</dt>
+                  <dd>the lowest text contrast in the player, measured on the pixels behind it over the film’s brightest and darkest frames; marks and track {(Math.floor(proofs.marks * 10) / 10).toFixed(1)}&nbsp;:&nbsp;1 or more.</dd>
+                </div>
+                <div>
+                  <dt>{Math.floor(proofs.target)}&nbsp;px</dt>
+                  <dd>the smallest touch target on a phone, measured where the finger lands; every Tab stop ({proofs.stops} in a walk) has a ring that holds 3&nbsp;:&nbsp;1.</dd>
+                </div>
+                <div>
+                  <dt>0</dt>
+                  <dd>pixels that move under reduced motion, in every still state, two photographs 800&nbsp;ms apart; the network Run draws is not drawn at all.</dd>
+                </div>
+              </>
+            ) : (
+              <div>
+                <dt>44&nbsp;px</dt>
+                <dd>every control on a touch screen; one Tab stop each, with a ring you can see. Under reduced motion, nothing moves by itself.</dd>
+              </div>
+            )}
           </dl>
         </section>
       </div>

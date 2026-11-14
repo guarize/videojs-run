@@ -17,8 +17,9 @@
     --rn-text-2: #aab1bc;
     --rn-text-3: #8b93a0;
     --rn-hairline: rgb(233 230 223 / 0.1);
-    --rn-track: #2b323d;
-    --rn-buffer: #46505e;
+    /* The track ahead, and what is loaded of it, each 3.4:1 or more on ink: the run's extent reads before it is run. */
+    --rn-track: #636b78;
+    --rn-buffer: #7a828f;
     /* Brass: what is running, and the run's progress. A page may set its own (`--rn-signal` on the player). */
     --rn-signal-own: var(--rn-signal, #c9ae78);
     --rn-on-signal: var(--rn-on-signal-color, #0f1318);
@@ -273,8 +274,22 @@
     color: var(--rn-text);
   }
 
-  .rn rn-log:not([data-caption]) .rn-log-line {
+  .rn rn-log:not([data-caption], [data-ready]) .rn-log-line {
     color: var(--rn-text-2);
+  }
+
+  /* An aside: the player speaking for itself, a step back from the film's own lines. */
+  .rn rn-log[data-aside] .rn-log-line {
+    color: var(--rn-text-2);
+  }
+
+  /* In the pill too, an aside is marked ◇, not with the step. */
+  .rn:not([data-rn-pad]) .video-controls-content:not([data-visible]) rn-log[data-aside] .rn-log-prompt {
+    display: inline;
+  }
+
+  .rn:not([data-rn-pad]) .video-controls-content:not([data-visible]) rn-log[data-aside] .rn-log-step {
+    display: none;
   }
 
   .rn .rn-log-prompt {
@@ -326,7 +341,7 @@
     background: var(--rn-signal-own);
   }
 
-  .rn rn-log:not([data-caption]) .rn-log-caret {
+  .rn rn-log:not([data-caption], [data-ready]) .rn-log-caret {
     display: none;
   }
 
@@ -355,7 +370,8 @@
   }
 
   .rn:not([data-rn-pad]) .video-controls-content:not([data-visible]) .video-controls-bottom:has(rn-log[data-caption]),
-  .rn:not([data-rn-pad]) .video-controls-content:not([data-visible]) .video-controls-bottom:has(rn-log[data-done]) {
+  .rn:not([data-rn-pad]) .video-controls-content:not([data-visible]) .video-controls-bottom:has(rn-log[data-done]),
+  .rn:not([data-rn-pad]) .video-controls-content:not([data-visible]) .video-controls-bottom:has(rn-log[data-aside]) {
     opacity: 1;
     translate: none;
     pointer-events: none;
@@ -371,7 +387,8 @@
   }
 
   .rn:not([data-rn-pad]) .video-controls-content:not([data-visible]) .video-controls-bottom:has(rn-log[data-caption]) :is(.video-controls-slider-row, .video-controls-row),
-  .rn:not([data-rn-pad]) .video-controls-content:not([data-visible]) .video-controls-bottom:has(rn-log[data-done]) :is(.video-controls-slider-row, .video-controls-row) {
+  .rn:not([data-rn-pad]) .video-controls-content:not([data-visible]) .video-controls-bottom:has(rn-log[data-done]) :is(.video-controls-slider-row, .video-controls-row),
+  .rn:not([data-rn-pad]) .video-controls-content:not([data-visible]) .video-controls-bottom:has(rn-log[data-aside]) :is(.video-controls-slider-row, .video-controls-row) {
     display: none;
   }
 
@@ -660,8 +677,14 @@
     display: contents;
   }
 
+  .rn[data-rn-planless] :is(rn-plan, rn-step-key) {
+    display: none;
+  }
+
   .rn .rn-step-key {
     width: auto;
+    min-width: var(--rn-key);
+    justify-content: center;
     max-width: min(26ch, 40cqi);
     padding-inline: 10px 12px;
     display: inline-flex;
@@ -1584,6 +1607,25 @@
     white-space: nowrap;
   }
 
+  /* The words the network starts from light up as their threads leave (mind.ts), and the steps they reach as the
+     threads arrive. */
+  .rn .rn-prompt-word {
+    transition: color var(--rn-fast) var(--rn-ease), text-shadow var(--rn-fast) var(--rn-ease);
+  }
+
+  .rn .rn-prompt-word.rn-lit {
+    color: var(--rn-signal-own);
+    text-shadow: 0 0 14px color-mix(in srgb, var(--rn-signal-own) 55%, transparent);
+  }
+
+  .rn .rn-step .rn-step-title {
+    transition: color var(--rn-base) var(--rn-ease);
+  }
+
+  .rn .rn-step[data-arrive] .rn-step-title {
+    color: var(--rn-signal-own);
+  }
+
   .rn .rn-prompt-caret {
     display: inline-block;
     width: 2px;
@@ -1646,6 +1688,15 @@
     vertical-align: 1px;
   }
 
+  /* A touch screen has no keyboard: the keys drawn for one (Enter on the Run key, a command's key in the palette) go,
+     and what they name stays where a finger reaches it. */
+  @media (hover: none) and (pointer: coarse) {
+    .rn[data-rn-prompted]:not([data-rn-started]) .rn-center-play .rn-play-run::after,
+    .rn .rn-palette-hint[data-key] {
+      display: none;
+    }
+  }
+
   /* Until the run is sent the plan waits; sent, its steps arrive one after another, once. */
   .rn[data-rn-prompted]:not([data-rn-started]) rn-plan {
     visibility: hidden;
@@ -1675,7 +1726,7 @@
       padding: 22px 26px 24px;
       border: 1px solid var(--rn-hairline);
       border-radius: var(--rn-r-card);
-      animation: rn-prompt-leave 520ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      animation: rn-prompt-leave 520ms cubic-bezier(0.4, 0, 0.2, 1) 360ms forwards;
       z-index: 2;
     }
   }
@@ -2059,10 +2110,20 @@
     .rn .rn-palette-esc {
       display: grid;
       place-items: center;
-      width: 32px;
-      height: 32px;
+      width: 44px;
+      height: 44px;
       padding: 0;
       border-radius: var(--rn-r-control);
+    }
+
+    /* A thumb's targets: the field is 44 px tall, and the row around it gives the room back. */
+    .rn .rn-palette-input {
+      min-height: 44px;
+    }
+
+    .rn .rn-palette-field,
+    .rn .rn-sheet .rn-palette-field {
+      padding-block: 4px;
     }
 
     .rn .rn-palette-esc-word {
@@ -2560,6 +2621,33 @@
     visibility: hidden;
   }
 
+  /* The player's own focus ring (Tab reaches the player itself, for its keys), drawn over everything in it: brass
+     against dark film, with ink inside it against bright film, so it holds on any frame. On a phone it rings the pad
+     with the picture. */
+  .media-skin.rn:focus-visible {
+    outline-style: none;
+  }
+
+  .media-skin.rn:focus-visible::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: var(--rn-r-card);
+    box-shadow: inset 0 0 0 3px var(--rn-signal-own), inset 0 0 0 6px var(--rn-ink);
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .media-skin.rn[data-rn-pad]:focus-visible::after {
+    inset-block-end: calc(-1 * var(--rn-pad-h));
+  }
+
+  /* A sheet open over the picture is the one thing there: the plan and the keys along the top step away under it,
+     and back after. */
+  .rn:has(> .rn-sheet:not([hidden])) :is(rn-plan, .video-controls-top) {
+    visibility: hidden;
+  }
+
   /* Opened over a short player, the bar steps back so the sheet has the room. */
   .rn:not([data-rn-pad]):has(> .rn-sheet:not([hidden])) .video-controls-bottom,
   .rn[data-rn-short][data-rn-comparing]:not([data-rn-pad]) .video-controls-bottom {
@@ -2574,12 +2662,21 @@
      shape the page gives the picture stays the picture's. Where the two meet, a brass thread shows the step's progress,
      the thread the pill carries elsewhere. Sheets (the palette, Reasoning, the plan) still open over the picture. */
   .media-skin.rn[data-rn-pad] {
-    --rn-pad-h: 128px;
+    --rn-pad-h: 136px;
     overflow: visible;
     margin-block-end: var(--rn-pad-h);
     border-end-start-radius: 0;
     border-end-end-radius: 0;
     clip-path: inset(0 0 calc(-1 * var(--rn-pad-h)) 0 round var(--rn-r-card));
+  }
+
+  /* On a touch screen the track is a whole thumb tall (44 px) and takes the same room in the bar: its reach runs into
+     the gaps above and below it, to the edge of the keys. */
+  @media (pointer: coarse) {
+    .rn .media-time-slider {
+      height: 44px;
+      margin-block: -6px;
+    }
   }
 
   .rn[data-rn-pad] .video-controls-backdrop {

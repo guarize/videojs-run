@@ -1,16 +1,17 @@
 /**
  * Thinking, then acting: the moment Run is pressed on a prompt.
  *
- * The prompt's words become the input layer of a small network drawn in fine lines; brass pulses cross its layers;
- * each output node reaches the step of the plan it becomes, as that step arrives. About a second and a half, once
- * per run sent, answering the press. Under reduced motion it is not drawn, and the plan simply appears.
+ * The prompt's words become the input layer of a small network drawn in fine lines; brass pulses cross its layers.
+ * One word for each step lights up in the prompt itself, and a brass thread runs from it through the layers to the
+ * step it becomes, which lights as the thread arrives: the ask, read, turning into the plan. Under two seconds,
+ * once per run sent, answering the press. Under reduced motion it is not drawn, and the plan simply appears.
  *
  * It is a drawing: the steps are the film's chapters, and no model runs.
  */
 import { whenRun, type Run } from './run';
 
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-export const MIND_MS = 1500;
+export const MIND_MS = 1700;
 
 interface Node {
   x: number;
@@ -21,6 +22,25 @@ interface Node {
 }
 
 const ease = (t: number) => 1 - (1 - Math.min(1, Math.max(0, t))) ** 3;
+
+/** What the press saw: the prompt's card, its words, and where each word was. */
+interface Seen {
+  prompt: DOMRect;
+  words: string[];
+  spans: HTMLElement[];
+  rects: DOMRect[];
+}
+
+const STOP = new Set(['the', 'and', 'from', 'with', 'that', 'this', 'into', 'over', 'what', 'when', 'your', 'for', 'how', 'its']);
+
+/** For each of `n` steps, the word it grows from: content words, spread evenly along the prompt. */
+export function wordsForSteps(words: readonly string[], n: number): number[] {
+  const bare = words.map((w) => w.toLowerCase().replace(/[^\p{L}\p{N}-]/gu, ''));
+  let content = bare.map((w, i) => (w.length >= 4 && !STOP.has(w) ? i : -1)).filter((i) => i >= 0);
+  if (!content.length) content = words.map((_, i) => i);
+  if (!content.length || n <= 0) return [];
+  return Array.from({ length: n }, (_, i) => content[Math.round((i * (content.length - 1)) / Math.max(1, n - 1))]);
+}
 
 export class RnMindElement extends HTMLElement {
   #abort: AbortController | null = null;
@@ -37,11 +57,12 @@ export class RnMindElement extends HTMLElement {
     whenRun(this, signal, (run) => {
       const { container, video } = run;
       // Read where the prompt and the plan are before the press changes the layout.
-      let before: { prompt: DOMRect; words: string[] } | null = null;
+      let before: Seen | null = null;
       const look = () => {
         const prompt = container.querySelector<HTMLElement>('rn-prompt');
         if (!prompt || !container.hasAttribute('data-rn-prompted') || container.hasAttribute('data-rn-started')) return;
-        before = { prompt: prompt.getBoundingClientRect(), words: (prompt.textContent ?? '').replace(/^\s*Prompt\s*/i, '').split(/\s+/).filter(Boolean) };
+        const spans = Array.from(prompt.querySelectorAll<HTMLElement>('.rn-prompt-word'));
+        before = { prompt: prompt.getBoundingClientRect(), words: spans.map((s) => s.textContent ?? ''), spans, rects: spans.map((s) => s.getBoundingClientRect()) };
       };
       container.addEventListener('pointerdown', look, { capture: true, signal });
       container.addEventListener('keydown', look, { capture: true, signal });
@@ -49,7 +70,7 @@ export class RnMindElement extends HTMLElement {
       video.addEventListener('play', () => {
         const seen = before;
         before = null;
-        if (!seen || reduced() || run.steps.length === 0 || video.currentTime > 0.5) return;
+        if (!seen || !seen.words.length || reduced() || run.steps.length === 0 || video.currentTime > 0.5) return;
         // Beside an open plan, the network runs across to its steps. On a phone, where the plan is closed and the
         // player is short, it runs down, from the prompt at the top to the steps' marks on the track below: drawn a
         // frame later, once the bar that holds the track is laid out.
@@ -65,7 +86,7 @@ export class RnMindElement extends HTMLElement {
     cancelAnimationFrame(this.#frame);
   }
 
-  #play(run: Run, seen: { prompt: DOMRect; words: string[] }, mode: 'across' | 'down') {
+  #play(run: Run, seen: Seen, mode: 'across' | 'down') {
     const canvas = this.#canvas;
     const { container } = run;
     if (!canvas) return;
@@ -86,7 +107,9 @@ export class RnMindElement extends HTMLElement {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     // Layers as columns, right to left: the prompt's words, two hidden layers, one node per step beside the plan.
-    const words = seen.words.slice(0, 9);
+    const words = seen.words.slice(0, down ? 12 : 10);
+    // The word each step grows from.
+    const picks = wordsForSteps(words, run.steps.length);
     // The plan card's own edge (its rows are narrower than the card): the outputs stand just outside it.
     const planBox = container.querySelector('rn-plan')?.getBoundingClientRect();
     const planRight = (planBox ? planBox.right : Math.max(...rows.map((r) => r.right))) - box.left;
@@ -122,9 +145,12 @@ export class RnMindElement extends HTMLElement {
       const yIn = Math.min(seen.prompt.bottom - box.top - 8, yTrack - 60);
       const row = (layer: number, count: number, y: number, at: number, from: number, to: number): Node[] =>
         Array.from({ length: count }, (_, i) => ({ x: from + ((to - from) * (count === 1 ? 0.5 : i / (count - 1))), y, layer, at: at + i * 0.014 }));
-      const promptLeft = Math.max(left, seen.prompt.left - box.left + 16);
-      const promptRight = Math.min(left + width, seen.prompt.right - box.left - 16);
-      const inputs = row(0, Math.max(3, words.length), yIn, 0.04, promptLeft, promptRight);
+      // Each input under its own word in the card (held to the track's width), so a thread leaves from the word.
+      const inputs: Node[] = words.map((_, i) => {
+        const r = seen.rects[i];
+        const x = r ? r.left + r.width / 2 - box.left : left + (width * (i + 0.5)) / words.length;
+        return { x: Math.min(left + width, Math.max(left, x)), y: yIn, layer: 0, at: 0.04 + i * 0.014 };
+      });
       const outputs: Node[] = run.steps.map((step, i) => ({ x: left + (step.start / duration) * width, y: yTrack, layer: 3, at: 0.56 + i * 0.05 }));
       layers = [inputs, row(1, 5, yIn + (yTrack - yIn) * 0.36, 0.22, left + width * 0.12, left + width * 0.88), row(2, 5, yIn + (yTrack - yIn) * 0.68, 0.38, left + width * 0.06, left + width * 0.94), outputs];
     }
@@ -132,6 +158,14 @@ export class RnMindElement extends HTMLElement {
     for (let l = 0; l < layers.length - 1; l++) {
       for (const a of layers[l]) for (const b of layers[l + 1]) edges.push([a, b, (Math.sin(a.y * 12.9898 + b.y * 78.233) * 43758.5453) % 1]);
     }
+    // The threads: for each step, its word, a unit in each hidden layer, and the step.
+    const pick = (layer: Node[], i: number, n: number) => layer[Math.round((i * (layer.length - 1)) / Math.max(1, n - 1))];
+    const threads = layers[3].map((out, i, all) => {
+      const from = layers[0][picks[i] ?? 0] ?? layers[0][0];
+      return { word: picks[i] ?? -1, path: [from, pick(layers[1], i, all.length), pick(layers[2], i, all.length), out] };
+    });
+    const litWords = new Set<HTMLElement>();
+    const arrived = new Set<HTMLElement>();
     const styles = getComputedStyle(container);
     const brass = styles.getPropertyValue('--rn-signal-own').trim() || '#c9ae78';
     const paper = styles.getPropertyValue('--rn-text').trim() || '#e9e6df';
@@ -232,10 +266,12 @@ export class RnMindElement extends HTMLElement {
           }
           // The prompt's words beside the input units: what goes in.
           if (n.layer === 0 && !down) {
-            const word = words[layer.indexOf(n)];
+            const index = layer.indexOf(n);
+            const word = words[index];
             if (word) {
-              ctx.globalAlpha = fade * lit * 0.85;
-              ctx.fillStyle = paper;
+              const chosen = picks.includes(index);
+              ctx.globalAlpha = fade * lit * (chosen ? 1 : 0.5);
+              ctx.fillStyle = chosen ? brass : paper;
               ctx.font = font;
               ctx.textBaseline = 'middle';
               ctx.fillText(word, n.x + 10, n.y);
@@ -243,6 +279,64 @@ export class RnMindElement extends HTMLElement {
           }
         }
       }
+      // The threads, each from its word to its step, drawn on as the signal goes; the word lights in the prompt as its
+      // thread leaves, the step as it arrives.
+      threads.forEach(({ word, path }, i) => {
+        const [a, , , d] = path;
+        const t0 = a.at + 0.03;
+        const q = (t - t0) / Math.max(0.05, d.at - t0);
+        if (q <= 0) return;
+        const span = seen.spans[word];
+        if (span && !litWords.has(span)) {
+          span.classList.add('rn-lit');
+          litWords.add(span);
+        }
+        const k = Math.min(1, q) * 3;
+        ctx.globalAlpha = fade * 0.95;
+        ctx.strokeStyle = brass;
+        ctx.lineWidth = 1.4;
+        for (let seg = 0; seg < 3 && seg < k; seg++) {
+          const from = path[seg];
+          const to = path[seg + 1];
+          const part = Math.min(1, k - seg);
+          ctx.beginPath();
+          ctx.moveTo(from.x, from.y);
+          const samples = 16;
+          for (let j = 1; j <= samples; j++) {
+            const [x, y] = at(from, to, (part * j) / samples);
+            ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+          if (part < 1) {
+            const [hx, hy] = at(from, to, part);
+            ctx.save();
+            ctx.shadowColor = brass;
+            ctx.shadowBlur = 10;
+            ctx.fillStyle = brass;
+            ctx.beginPath();
+            ctx.arc(hx, hy, 2.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+        }
+        if (q >= 1) {
+          const row = stepEls[i];
+          if (row && !arrived.has(row)) {
+            row.setAttribute('data-arrive', '');
+            arrived.add(row);
+          }
+          // Down, on the track: the step's number comes up over its mark.
+          if (down) {
+            ctx.globalAlpha = fade * ease((t - d.at) / 0.1);
+            ctx.fillStyle = brass;
+            ctx.font = font;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(String(i + 1).padStart(2, '0'), d.x, d.y - 9);
+            ctx.textAlign = 'start';
+          }
+        }
+      });
       // Down: each output lands on its step's mark, which rings once as it is reached.
       if (down) {
         for (const n of layers[3]) {
@@ -282,6 +376,8 @@ export class RnMindElement extends HTMLElement {
         ctx.clearRect(0, 0, box.width, height);
         this.removeAttribute('data-on');
         container.removeAttribute('data-rn-mind');
+        for (const span of litWords) span.classList.remove('rn-lit');
+        for (const row of arrived) row.removeAttribute('data-arrive');
         this.#frame = 0;
       }
     };

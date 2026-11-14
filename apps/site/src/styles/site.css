@@ -251,7 +251,7 @@ h2 em {
   height: 100%;
 }
 
-/* A phone: the player's bar hangs under the picture (the skin's pad, 128 px under a 16:9 picture), so the host
+/* A phone: the player's bar hangs under the picture (the skin's pad, 136 px under a 16:9 picture), so the host
    grows with it, and the poster holds the same room from the first paint. */
 @media (width < 512px) {
   .player-host {
@@ -263,7 +263,7 @@ h2 em {
   .player-host .player-poster {
     height: auto;
     aspect-ratio: 16 / 9;
-    margin-bottom: 128px;
+    margin-bottom: 136px;
     border-radius: 18px 18px 0 0;
   }
 

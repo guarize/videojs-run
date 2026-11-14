@@ -13,6 +13,7 @@
     "deploy:netlify": "pnpm dlx netlify-cli@27 deploy --build",
     "deploy:cloudflare": "pnpm run build && pnpm dlx wrangler@4 pages deploy dist --project-name run",
     "test:e2e": "playwright test",
+    "test:proofs": "playwright test contrast targets keyboard motion --output=test-results/proofs --reporter=list,./tests/e2e/support/measure-reporter.ts",
     "site:dev": "pnpm --filter @run/site dev",
     "site:build": "pnpm --filter @run/site build",
     "site:stills": "node scripts/site-stills.mjs",

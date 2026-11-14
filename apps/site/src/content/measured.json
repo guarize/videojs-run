@@ -1,10 +1,10 @@
 {
   "kB": {
-    "js": 83.3,
-    "css": 15.6
+    "js": 85.7,
+    "css": 16.7
   },
   "tests": {
-    "passed": 42,
+    "passed": 93,
     "failed": 0,
     "engines": [
       "chromium",
@@ -12,5 +12,19 @@
       "firefox"
     ],
     "at": "2026-11-14"
+  },
+  "proofs": {
+    "passed": true,
+    "text": 5.58,
+    "marks": 3.47,
+    "target": 44,
+    "stops": 12,
+    "ringless": 0,
+    "still": true,
+    "engines": [
+      "chromium",
+      "webkit",
+      "firefox"
+    ]
   }
 }

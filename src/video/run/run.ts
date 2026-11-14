@@ -179,7 +179,14 @@ class Run extends EventTarget {
     this.#chapters();
   }
 
+  /** A film with no chapters has no plan: its key and its card go (`data-rn-planless`), and the log says the run's state. */
+  #planless() {
+    const none = !this.steps.length && !Array.from(this.video.textTracks).some((t) => t.kind === 'chapters');
+    if (this.container.hasAttribute('data-rn-planless') !== none) this.container.toggleAttribute('data-rn-planless', none);
+  }
+
   #chapters() {
+    this.#planless();
     const track = Array.from(this.video.textTracks).find((t) => t.kind === 'chapters');
     if (!track) return;
     if (track.mode === 'disabled') track.mode = 'hidden';
@@ -189,6 +196,7 @@ class Run extends EventTarget {
       const steps = cues.map((cue) => ({ title: cue.text.trim(), start: cue.startTime, end: cue.endTime }));
       if (steps.length === this.steps.length && steps.every((s, i) => s.title === this.steps[i].title && s.start === this.steps[i].start)) return;
       this.steps = steps;
+      this.#planless();
       this.dispatchEvent(new Event('steps'));
       this.#update(true);
     };
@@ -461,6 +469,17 @@ export class RnPlanElement extends HTMLElement {
 
   /** The list is a grid with one Tab stop: up and down between steps, left and right along a step's row. */
   #keys(event: KeyboardEvent) {
+    // Escape closes the plan, as its key would, and gives the focus back to that key.
+    if (event.key === 'Escape') {
+      const container = this.closest<HTMLElement>('media-container');
+      const key = container?.querySelector<HTMLButtonElement>('.rn-step-key');
+      if (!container || !key || container.getAttribute('data-rn-plan') === 'closed') return;
+      event.preventDefault();
+      event.stopPropagation();
+      key.click();
+      key.focus();
+      return;
+    }
     if (!this.#list || !['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
     const rows = Array.from(this.#list.children).map((li) => Array.from(li.querySelectorAll<HTMLButtonElement>('button')));
     const r = rows.findIndex((row) => row.includes(document.activeElement as HTMLButtonElement));
@@ -566,6 +585,8 @@ export class RnLogElement extends HTMLElement {
       let watched: TextTrack | null = null;
       const captions = () => Array.from(video.textTracks).find((t) => (t.kind === 'captions' || t.kind === 'subtitles') && t.mode === 'showing') ?? null;
       const show = () => {
+        // While the player says something of its own (an aside, below), the line is its.
+        if (this.hasAttribute('data-aside')) return;
         const track = captions();
         if (track !== watched) {
           watched?.removeEventListener('cuechange', show);
@@ -574,9 +595,20 @@ export class RnLogElement extends HTMLElement {
         }
         const cue = track ? (Array.from(track.activeCues ?? []).at(-1) as VTTCue | undefined) : undefined;
         const step = run.steps[Math.max(0, run.current)];
-        const line = cue ? cue.text.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() : '';
+        // Before the run, the line is the plan's, not the film's: how many steps wait to be run.
+        const started = run.container.hasAttribute('data-rn-started');
+        const n = run.steps.length;
+        const line = started && cue ? cue.text.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() : '';
         this.toggleAttribute('data-caption', !!line);
-        const text = line || (run.ended ? `Completed in ${clock(video.duration)}` : run.current >= 0 && step ? step.title : run.steps.length ? 'Ready to run' : '');
+        this.toggleAttribute('data-ready', !started && n > 0);
+        let text = line;
+        if (!text) {
+          if (run.ended) text = `Completed in ${clock(video.duration)}`;
+          else if (!started) text = n ? `${n} step${n === 1 ? '' : 's'}, ready to run` : 'Ready to run';
+          else if (n && run.current >= 0 && step) text = step.title;
+          // No plan and nothing said: the run's own state.
+          else text = video.paused ? `Stopped at ${clock(video.currentTime)}` : 'Running';
+        }
         // Moved by hand (a drag, a seek), the line decodes into place; playing on, it is typed.
         const slider = this.closest('media-container')?.querySelector('media-time-slider');
         if (line && (video.seeking || slider?.hasAttribute('data-dragging'))) this.#decode(line);
@@ -584,6 +616,35 @@ export class RnLogElement extends HTMLElement {
       };
       video.textTracks.addEventListener('change', show, { signal });
       video.addEventListener('seeked', show, { signal });
+      video.addEventListener('play', show, { signal });
+      video.addEventListener('pause', show, { signal });
+
+      // An aside: the player's own decision (reasoning.ts), said in the log a moment, marked ◇ like its Reasoning key,
+      // then the film's line again. A seek ends it at once.
+      const mark = this.querySelector<HTMLElement>('.rn-log-prompt')!;
+      let aside = 0;
+      const endAside = () => {
+        clearTimeout(aside);
+        if (!this.hasAttribute('data-aside')) return;
+        this.removeAttribute('data-aside');
+        mark.textContent = '›';
+        show();
+      };
+      run.container.addEventListener('rn-aside', (event) => {
+        const text = (event as CustomEvent<string>).detail;
+        if (!text) return;
+        clearTimeout(aside);
+        this.toggleAttribute('data-aside', true);
+        this.toggleAttribute('data-caption', false);
+        mark.textContent = '◇';
+        this.#write(text, !video.paused);
+        aside = window.setTimeout(endAside, 2800);
+      }, { signal });
+      video.addEventListener('seeking', endAside, { signal });
+      video.addEventListener('pause', endAside, { signal });
+      const begun = new MutationObserver(show);
+      begun.observe(run.container, { attributes: true, attributeFilter: ['data-rn-started'] });
+      signal.addEventListener('abort', () => begun.disconnect());
       video.textTracks.addEventListener('addtrack', show, { signal });
       run.addEventListener('step', show, { signal });
       run.addEventListener('steps', show, { signal });

@@ -19,12 +19,13 @@ export class RnPromptElement extends HTMLElement {
     const words = this.querySelector<HTMLElement>('.rn-prompt-words')!;
     const read = () => {
       const text = (container.closest('[data-rn-prompt]')?.getAttribute('data-rn-prompt') ?? '').trim();
-      // A hostname or a compound with a hyphen stays on one line.
+      // Each word a span of its own, so the network Run draws can light the words it starts from (mind.ts); a
+      // hostname or a compound with a hyphen stays on one line.
       words.replaceChildren(
-        ...text.split(/(\S*\w-\w\S*)/).filter(Boolean).map((part) => {
-          if (!/\w-\w/.test(part)) return document.createTextNode(part);
+        ...text.split(/(\s+)/).filter(Boolean).map((part) => {
+          if (/^\s+$/.test(part)) return document.createTextNode(part);
           const span = document.createElement('span');
-          span.className = 'rn-nowrap';
+          span.className = /\w-\w/.test(part) ? 'rn-prompt-word rn-nowrap' : 'rn-prompt-word';
           span.textContent = part;
           return span;
         }),

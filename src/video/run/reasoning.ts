@@ -44,6 +44,25 @@ export function sourceLine(choice: SourceChoice | undefined): string {
   }
 }
 
+/** The source in a few words, for a line in the log. */
+export function sourceShort(choice: SourceChoice | undefined): string {
+  if (!choice) return '';
+  const from = host(choice.src);
+  switch (choice.why) {
+    case 'stream':
+      return `the HLS stream from ${from}`;
+    case 'no-hls':
+      return `the MP4 from ${from}, no HLS here`;
+    case 'failed':
+      return `the next source, from ${from}`;
+    default:
+      return `the file from ${from}`;
+  }
+}
+
+/** Asides: at most one in this long, so the log stays the film's. */
+const ASIDE_GAP = 8000;
+
 function rendition(height: number): string {
   if (!height) return '';
   const steps = [2160, 1440, 1080, 720, 540, 480, 360, 240];
@@ -59,6 +78,12 @@ export class RnReasoningElement extends HTMLElement {
   #lines: HTMLElement | null = null;
   #asked = 0;
   #thought = 0;
+  /** The last answer under 50 ms (too quick to count as a wait), said while no real wait has been. */
+  #quick = 0;
+  /** When the player last said something in the log, unasked, and the picture size it last said. */
+  #asideAt = -Infinity;
+  #saidSize = '';
+  #first = true;
   #waits = 0;
   #waited = 0;
   #sizes: string[] = [];
@@ -116,6 +141,7 @@ export class RnReasoningElement extends HTMLElement {
   disconnectedCallback() {
     this.#abort?.abort();
     clearInterval(this.#timer);
+    clearTimeout(this.#sizeTimer);
   }
 
   get open(): boolean {
@@ -131,8 +157,11 @@ export class RnReasoningElement extends HTMLElement {
     clearInterval(this.#timer);
     if (on) {
       this.#render();
-      // While it is open the numbers are live: loaded ahead changes as the film plays.
-      this.#timer = window.setInterval(() => this.#render(), 500);
+      // While it is open and the film plays, the numbers are live: loaded ahead changes as it goes. Paused, the panel
+      // holds what it last said (the pause draws it once more), so nothing on it moves while the film is still.
+      this.#timer = window.setInterval(() => {
+        if (this.#video && !this.#video.paused) this.#render();
+      }, 500);
     } else if (focus) {
       this.#button.focus();
     }
@@ -153,20 +182,42 @@ export class RnReasoningElement extends HTMLElement {
       this.toggleAttribute('data-thinking', true);
     }, opts);
     video.addEventListener('seeking', ask, opts);
-    video.addEventListener('playing', () => this.#landed(), opts);
+    video.addEventListener('playing', () => {
+      this.#landed();
+      if (!this.#first) return;
+      this.#first = false;
+      // The first frame of the run: what it took and what it chose, said once, after the network has been drawn.
+      const container = this.closest<HTMLElement>('media-container');
+      let tries = 0;
+      const say = () => {
+        if (container?.hasAttribute('data-rn-mind') && tries++ < 20) return void window.setTimeout(say, 150);
+        const took = this.#thought || this.#quick;
+        const size = rendition(video.videoHeight);
+        const from = sourceShort(choiceOf(video));
+        this.#saidSize = size;
+        const opened = from ? `opened ${from}${size ? `, at ${size}` : ''}` : '';
+        const line = [took ? `Thought for ${seconds(took)}` : '', opened].filter(Boolean).join(' · ');
+        if (line) this.#aside(line[0].toUpperCase() + line.slice(1));
+      };
+      window.setTimeout(say, 400);
+    }, opts);
     // A seek in play ends its wait at seeked or canplay, and may never fire playing again (WebKit).
     video.addEventListener('seeked', () => this.#landed(), opts);
     video.addEventListener('canplay', () => this.#landed(), opts);
     video.addEventListener('pause', () => {
       this.#asked = 0;
       this.toggleAttribute('data-thinking', false);
-      this.#label(this.#thought ? `Thought for ${seconds(this.#thought)}` : 'Ready');
+      const last = this.#thought || this.#quick;
+      this.#label(last ? `Thought for ${seconds(last)}` : 'Ready');
+      if (this.open) this.#render();
     }, opts);
     video.addEventListener('resize', () => {
       const size = rendition(video.videoHeight);
       if (size && this.#sizes.at(-1) !== size) {
         this.#sizes.push(size);
         this.#marks.push({ at: video.currentTime, kind: 'size', label: size });
+        // A change of picture in play is the stream's decision: said in the log, once the last aside has had its time.
+        this.#sizeSoon(video);
       }
       if (this.open) this.#render();
     }, opts);
@@ -185,7 +236,10 @@ export class RnReasoningElement extends HTMLElement {
     // there is none yet, the player says how few milliseconds it took; a clock that didn't move leaves "Ready").
     if (took < 50) {
       this.toggleAttribute('data-thinking', false);
-      if (!this.#thought && took >= 1) this.#label(`Thought for ${seconds(took)}`);
+      if (!this.#thought && took >= 1) {
+        this.#quick = took;
+        this.#label(`Thought for ${seconds(took)}`);
+      }
       return;
     }
     // The first wait counts as one; every one after is a stall or a seek the player waited on.
@@ -194,8 +248,35 @@ export class RnReasoningElement extends HTMLElement {
     this.#marks.push({ at: this.#askedAt, kind: 'wait', ms: took });
     this.#thought = took;
     this.toggleAttribute('data-thinking', false);
+    if (this.#waits > 1 && took >= 300) this.#aside(`Waited ${seconds(took)} for the film`);
     this.#label(`Thought for ${seconds(took)}`);
     if (this.open) this.#render();
+  }
+
+  #sizeTimer = 0;
+
+  /** Says the picture's new size in the log when it differs from the last said, waiting out the last aside's gap. */
+  #sizeSoon(video: HTMLVideoElement) {
+    clearTimeout(this.#sizeTimer);
+    const size = rendition(video.videoHeight);
+    if (!this.#saidSize || !size || size === this.#saidSize || video.paused) return;
+    const wait = ASIDE_GAP - (performance.now() - this.#asideAt);
+    if (wait > 0) {
+      this.#sizeTimer = window.setTimeout(() => this.#sizeSoon(video), wait + 50);
+      return;
+    }
+    this.#saidSize = size;
+    this.#aside(`Switched to ${size}, as the stream allowed`);
+  }
+
+  /** A line the player says in the log, unasked, for a real decision it made (run.ts RnLogElement shows it a moment). */
+  #aside(text: string) {
+    // Said only while the film runs: a paused player changes nothing by itself.
+    if (!this.#video || this.#video.paused) return;
+    const now = performance.now();
+    if (now - this.#asideAt < ASIDE_GAP) return;
+    this.#asideAt = now;
+    this.closest('media-container')?.dispatchEvent(new CustomEvent('rn-aside', { detail: text }));
   }
 
   #label(text: string) {

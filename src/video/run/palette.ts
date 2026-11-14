@@ -13,6 +13,8 @@ interface Command {
   group: 'Playback' | 'Steps' | 'View';
   label: string;
   hint?: string;
+  /** The hint is the command's key on a keyboard: not shown on a touch screen. */
+  key?: boolean;
   /** Words a search may match besides the label. */
   also?: string;
   run: () => void;
@@ -146,7 +148,7 @@ export class RnPaletteElement extends HTMLElement {
     const planOpen = container.getAttribute('data-rn-plan') !== 'closed';
     const doc = document as Document & { pictureInPictureEnabled?: boolean };
     const list: Command[] = [
-      { id: 'run', group: 'Playback', label: playing ? 'Stop' : video.ended ? 'Run again' : 'Run', hint: 'Space', also: 'play pause', run: () => (playing ? video.pause() : void video.play().catch(() => undefined)) },
+      { id: 'run', group: 'Playback', label: playing ? 'Stop' : video.ended ? 'Run again' : 'Run', hint: 'Space', key: true, also: 'play pause', run: () => (playing ? video.pause() : void video.play().catch(() => undefined)) },
       { id: 'restart', group: 'Playback', label: 'Restart the run', also: 'beginning start over', run: () => { run.repeat(-1); video.currentTime = 0; void video.play().catch(() => undefined); } },
       ...SPEEDS.map((rate) => ({
         id: `speed-${rate}`,
@@ -156,9 +158,9 @@ export class RnPaletteElement extends HTMLElement {
         also: 'rate faster slower',
         run: () => (video.playbackRate = rate),
       })),
-      { id: 'mute', group: 'Playback', label: video.muted ? 'Unmute' : 'Mute', hint: 'M', also: 'sound volume audio', run: () => (video.muted = !video.muted) },
+      { id: 'mute', group: 'Playback', label: video.muted ? 'Unmute' : 'Mute', hint: 'M', key: true, also: 'sound volume audio', run: () => (video.muted = !video.muted) },
       ...(captions
-        ? [{ id: 'captions', group: 'Playback' as const, label: captions.mode === 'showing' ? 'Turn captions off' : 'Turn captions on', hint: 'C', also: 'subtitles log', run: () => (captions.mode = captions.mode === 'showing' ? 'disabled' : 'showing') }]
+        ? [{ id: 'captions', group: 'Playback' as const, label: captions.mode === 'showing' ? 'Turn captions off' : 'Turn captions on', hint: 'C', key: true, also: 'subtitles log', run: () => (captions.mode = captions.mode === 'showing' ? 'disabled' : 'showing') }]
         : []),
       ...run.steps.map((step, index) => ({
         id: `step-${index}`,
@@ -176,8 +178,8 @@ export class RnPaletteElement extends HTMLElement {
         : []),
       { id: 'plan', group: 'View', label: planOpen ? 'Hide the plan' : 'Show the plan', also: 'steps list', run: () => container.setAttribute('data-rn-plan', planOpen ? 'closed' : 'open') },
       ...(reasoning ? [{ id: 'reasoning', group: 'View' as const, label: 'Show the reasoning', also: 'thought stats source', run: () => reasoning.toggle(true) }] : []),
-      ...(doc.pictureInPictureEnabled ? [{ id: 'pip', group: 'View' as const, label: 'Picture in picture', hint: 'I', also: 'pip float', run: () => container.querySelector<HTMLElement>('media-pip-button')?.click() }] : []),
-      { id: 'fullscreen', group: 'View', label: 'Fullscreen', hint: 'F', also: 'full screen', run: () => container.querySelector<HTMLElement>('media-fullscreen-button')?.click() },
+      ...(doc.pictureInPictureEnabled ? [{ id: 'pip', group: 'View' as const, label: 'Picture in picture', hint: 'I', key: true, also: 'pip float', run: () => container.querySelector<HTMLElement>('media-pip-button')?.click() }] : []),
+      { id: 'fullscreen', group: 'View', label: 'Fullscreen', hint: 'F', key: true, also: 'full screen', run: () => container.querySelector<HTMLElement>('media-fullscreen-button')?.click() },
       {
         id: 'link',
         group: 'View',
@@ -217,7 +219,9 @@ export class RnPaletteElement extends HTMLElement {
       option.dataset.at = String(at);
       option.innerHTML = '<span class="rn-palette-label"></span><span class="rn-palette-hint"></span>';
       option.querySelector('.rn-palette-label')!.textContent = command.label;
-      option.querySelector('.rn-palette-hint')!.textContent = command.hint ?? '';
+      const hint = option.querySelector<HTMLElement>('.rn-palette-hint')!;
+      hint.textContent = command.hint ?? '';
+      hint.toggleAttribute('data-key', !!command.key);
       out.push(option);
     });
     list.replaceChildren(...out);
