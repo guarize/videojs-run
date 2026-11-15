@@ -71,6 +71,7 @@ import './run/latent';
 import './run/mind';
 import './run/palette';
 import './run/peek';
+import './run/checkpoint';
 import './run/screen';
 import './run/a11y';
 import '@fontsource/fragment-mono/latin-400.css';

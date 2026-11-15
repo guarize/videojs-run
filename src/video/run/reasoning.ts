@@ -12,9 +12,10 @@ import { choiceOf, type SourceChoice } from './sources';
 
 let ids = 0;
 
-/** "38 ms", "0.4 s", "1.2 s", "12 s": a wait under a tenth of a second in whole milliseconds, never "0.0 s". */
+/** "<1 ms", "38 ms", "0.4 s", "1.2 s", "12 s": under a tenth of a second in whole milliseconds, never "0.0 s". */
 export function seconds(ms: number): string {
-  if (ms < 100) return `${Math.max(1, Math.round(ms))} ms`;
+  if (ms < 1) return '<1 ms';
+  if (ms < 100) return `${Math.round(ms)} ms`;
   const s = ms / 1000;
   return s < 10 ? `${s.toFixed(1)} s` : `${Math.round(s)} s`;
 }
@@ -50,13 +51,13 @@ export function sourceShort(choice: SourceChoice | undefined): string {
   const from = host(choice.src);
   switch (choice.why) {
     case 'stream':
-      return `the HLS stream from ${from}`;
+      return `picked ${from}'s HLS stream: this browser plays it itself`;
     case 'no-hls':
-      return `the MP4 from ${from}, no HLS here`;
+      return `picked ${from}'s MP4: this browser has no HLS of its own`;
     case 'failed':
-      return `the next source, from ${from}`;
+      return `the first source failed, so it moved on to ${from}`;
     default:
-      return `the file from ${from}`;
+      return `picked the file from ${from}`;
   }
 }
 
@@ -78,8 +79,8 @@ export class RnReasoningElement extends HTMLElement {
   #lines: HTMLElement | null = null;
   #asked = 0;
   #thought = 0;
-  /** The last answer under 50 ms (too quick to count as a wait), said while no real wait has been. */
-  #quick = 0;
+  /** The last answer under 50 ms (too quick to count as a wait), said while no real wait has been; -1 for none. */
+  #quick = -1;
   /** When the player last said something in the log, unasked, and the picture size it last said. */
   #asideAt = -Infinity;
   #saidSize = '';
@@ -195,8 +196,7 @@ export class RnReasoningElement extends HTMLElement {
         const size = rendition(video.videoHeight);
         const from = sourceShort(choiceOf(video));
         this.#saidSize = size;
-        const opened = from ? `opened ${from}${size ? `, at ${size}` : ''}` : '';
-        const line = [took ? `Thought for ${seconds(took)}` : '', opened].filter(Boolean).join(' · ');
+        const line = [took >= 0 ? `Thought for ${seconds(took)}` : '', from].filter(Boolean).join(' · ');
         if (line) this.#aside(line[0].toUpperCase() + line.slice(1));
       };
       window.setTimeout(say, 400);
@@ -208,7 +208,7 @@ export class RnReasoningElement extends HTMLElement {
       this.#asked = 0;
       this.toggleAttribute('data-thinking', false);
       const last = this.#thought || this.#quick;
-      this.#label(last ? `Thought for ${seconds(last)}` : 'Ready');
+      this.#label(last >= 0 ? `Thought for ${seconds(last)}` : 'Ready');
       if (this.open) this.#render();
     }, opts);
     video.addEventListener('resize', () => {
@@ -233,10 +233,10 @@ export class RnReasoningElement extends HTMLElement {
     const took = performance.now() - this.#asked;
     this.#asked = 0;
     // A seek answered within a frame or two was no wait: it is not counted, and the last real one stands (or, if
-    // there is none yet, the player says how few milliseconds it took; a clock that didn't move leaves "Ready").
+    // there is none yet, the player says how few milliseconds it took).
     if (took < 50) {
       this.toggleAttribute('data-thinking', false);
-      if (!this.#thought && took >= 1) {
+      if (!this.#thought) {
         this.#quick = took;
         this.#label(`Thought for ${seconds(took)}`);
       }

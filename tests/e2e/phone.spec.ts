@@ -36,14 +36,17 @@ test.describe('phone', () => {
       page.evaluate(() => {
         const c = document.querySelector('media-container')!.getBoundingClientRect();
         const b = document.querySelector('.video-controls-bottom')!.getBoundingClientRect();
-        // Whole pixels: the film's own ratio may differ from the 16:9 held for it by a hair of rounding.
-        return { picture: [c.width, c.height].map(Math.round), pad: [b.left - c.left, b.top - c.top, b.width, b.height].map(Math.round) };
+        return { picture: [c.width, c.height], pad: [b.left - c.left, b.top - c.top, b.width, b.height] };
       });
     const before = await shape();
     await page.locator('.rn-center-play').tap();
     await expect.poll(async () => (await media(page)).time, { timeout: 20_000 }).toBeGreaterThan(0.5);
     await page.evaluate(() => (document.querySelector('video') as HTMLVideoElement).pause());
-    expect(await shape(), 'the picture and the pad, before and after the run starts').toEqual(before);
+    // Within a pixel: the film's own ratio and the 16:9 held for it may round a hair apart (Firefox lays out in 1/60 px).
+    const after = await shape();
+    for (const key of ['picture', 'pad'] as const) {
+      after[key].forEach((v, i) => expect(Math.abs(v - before[key][i]), `${key}[${i}] before and after the run starts`).toBeLessThanOrEqual(1));
+    }
     const cover = await page.evaluate(() => {
       const c = document.querySelector('media-container')!.getBoundingClientRect();
       const b = document.querySelector('.video-controls-bottom')!.getBoundingClientRect();

@@ -26,8 +26,10 @@ if (existsSync('test-results/report.json')) {
     for (const spec of suite.specs ?? []) {
       for (const test of spec.tests ?? []) {
         engines.add(test.projectName);
-        const ok = test.results?.at(-1)?.status === 'passed';
-        if (ok) passed++;
+        const status = test.results?.at(-1)?.status;
+        // A test skipped on purpose (one an engine cannot run) is neither.
+        if (status === 'skipped') continue;
+        if (status === 'passed') passed++;
         else failed++;
       }
     }

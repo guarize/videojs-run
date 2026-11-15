@@ -142,7 +142,33 @@ class Run extends EventTarget {
         pad = roomy;
       } else roomFor = -1;
       if (container.hasAttribute('data-rn-pad') !== pad) container.toggleAttribute('data-rn-pad', pad);
+      lift();
     };
+    // Before the run, the large Run key clears the bar where the bar lies over the picture (a tablet's short player
+    // would put it under the bar): lifted just enough (`--rn-lift`, run.css), and not at all where it already clears.
+    const lift = () => {
+      const key = container.querySelector<HTMLElement>('.rn-center-play');
+      const bar = container.querySelector<HTMLElement>('.video-controls-bottom');
+      let by = 0;
+      if (key && bar && !container.hasAttribute('data-rn-started') && !container.hasAttribute('data-rn-pad')) {
+        const was = Number.parseFloat(container.style.getPropertyValue('--rn-lift')) || 0;
+        const k = key.getBoundingClientRect();
+        const b = bar.getBoundingClientRect();
+        if (k.height && b.height && getComputedStyle(bar).display !== 'none') by = Math.max(0, Math.ceil(k.bottom + was + 12 - b.top));
+      }
+      container.style.setProperty('--rn-lift', `${by}px`);
+    };
+    // (Measured again once the bar's own transitions have settled.)
+    container.addEventListener('transitionend', (event) => {
+      if ((event.target as Element).matches?.('.video-controls-bottom, .video-controls-center')) lift();
+    });
+    // A link to a moment (`#t=42.2`, from a checkpoint or the palette) opens the page's first player there.
+    const linked = /(?:^#|&)t=(\d+(?:\.\d+)?)/.exec(location.hash);
+    if (linked && document.querySelector('media-container') === container) {
+      const go = () => (video.currentTime = Math.min(Number(linked[1]), Math.max(0, video.duration - 0.5)));
+      if (video.readyState >= 1) go();
+      else video.addEventListener('loadedmetadata', go, { once: true });
+    }
     // The player keeps the film's own shape (run.css, `--rn-ratio`), read from the film as soon as it is known.
     const shape = () => {
       if (video.videoWidth && video.videoHeight) container.style.setProperty('--rn-ratio', `${video.videoWidth} / ${video.videoHeight}`);
@@ -150,8 +176,11 @@ class Run extends EventTarget {
     video.addEventListener('loadedmetadata', shape);
     video.addEventListener('resize', shape);
     shape();
-    new ResizeObserver(measure).observe(container);
-    new MutationObserver(measure).observe(container, { attributes: true, attributeFilter: ['data-rn-fill'] });
+    const watch = new ResizeObserver(measure);
+    watch.observe(container);
+    const bar = container.querySelector('.video-controls-bottom');
+    if (bar) watch.observe(bar);
+    new MutationObserver(measure).observe(container, { attributes: true, attributeFilter: ['data-rn-fill', 'data-rn-started'] });
     for (const type of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(type, measure);
     measure();
     const update = () => this.#update();

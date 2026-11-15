@@ -99,7 +99,12 @@ for (const layout of [
       await expect.poll(() => page.evaluate(() => (document.querySelector('video') as HTMLVideoElement).paused)).toBe(true);
       await expect(container(page)).toHaveAttribute('data-rn-started', '');
       const network = await mind(page);
-      results.paused = await still(page, 'Run pressed, then paused');
+      // Paused mid-run, the checkpoint lays out its context window: photographed once its frames have all come in
+      // (their arrival is content, not motion; under reduced motion nothing of it moves).
+      await expect(page.locator('rn-checkpoint')).toBeVisible();
+      await expect(page.locator('rn-checkpoint')).toHaveAttribute('data-ready', '', { timeout: 20_000 });
+      expect(await page.locator('rn-checkpoint').evaluate((el) => el.getAnimations({ subtree: true }).length), 'animations in the checkpoint').toBe(0);
+      results.paused = await still(page, 'Run pressed, then paused: the checkpoint');
 
       // The plan, opened by its key (on a wide player it stands open: closed, then opened again).
       const stepKey = page.locator('.rn-step-key');

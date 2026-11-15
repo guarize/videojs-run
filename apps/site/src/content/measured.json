@@ -1,17 +1,17 @@
 {
   "kB": {
-    "js": 85.7,
-    "css": 16.7
+    "js": 89.7,
+    "css": 17.4
   },
   "tests": {
-    "passed": 93,
+    "passed": 115,
     "failed": 0,
     "engines": [
       "chromium",
       "webkit",
       "firefox"
     ],
-    "at": "2026-11-14"
+    "at": "2026-11-15"
   },
   "proofs": {
     "passed": true,

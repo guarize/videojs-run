@@ -20,14 +20,33 @@ let queue: Promise<unknown> = Promise.resolve();
 export function frame(run: Run, seconds: number): Promise<string> {
   const mux = run.frameAt(seconds);
   if (mux) return Promise.resolve(mux);
+  return drawnFrame(run, seconds);
+}
+
+/** A frame drawn from the film itself, never asked of Mux: for when Mux's picture does not come. */
+export function drawnFrame(run: Run, seconds: number): Promise<string> {
   const src = run.video.currentSrc;
+  if (!src || /\.m3u8(?:[?#]|$)/i.test(src)) return Promise.reject(new Error('frame'));
   const key = `${src}#${seconds.toFixed(2)}`;
   const known = drawn.get(key);
   if (known) return known;
-  const made = (queue = queue.then(() => draw(src, seconds, run.video.crossOrigin), () => draw(src, seconds, run.video.crossOrigin))) as Promise<string>;
+  const once = () => timed(draw(src, seconds, run.video.crossOrigin));
+  const made = (queue = queue.then(once, once)) as Promise<string>;
   drawn.set(key, made);
   made.catch(() => drawn.delete(key));
   return made;
+}
+
+/** A drawing that has not come in 6 s is given up, and the reader starts over (WebKit's can stall on a seek). */
+function timed(drawing: Promise<string>): Promise<string> {
+  let timer = 0;
+  const late = new Promise<never>((_, reject) => {
+    timer = window.setTimeout(() => {
+      reader = null;
+      reject(new Error('frame'));
+    }, 6000);
+  });
+  return Promise.race([drawing, late]).finally(() => clearTimeout(timer));
 }
 
 async function draw(src: string, seconds: number, crossOrigin: string | null): Promise<string> {

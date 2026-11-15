@@ -64,7 +64,8 @@
     -webkit-font-smoothing: antialiased;
     background: var(--rn-ink);
     border-radius: var(--rn-r-card);
-    overflow: hidden;
+    /* Clipped, never a box that scrolls: nothing inside it (a focus, a click) can slide the player's layers. */
+    overflow: clip;
     container-type: inline-size;
     /* The film's own shape (run.ts reads it from the film), and 16:9 until the film has said: a video that hasn't
        loaded is 2:1, so the player, and on a phone the pad under it, would move as the film opens. */
@@ -280,7 +281,7 @@
 
   /* An aside: the player speaking for itself, a step back from the film's own lines. */
   .rn rn-log[data-aside] .rn-log-line {
-    color: var(--rn-text-2);
+    color: var(--rn-signal-own);
   }
 
   /* In the pill too, an aside is marked ◇, not with the step. */
@@ -1668,6 +1669,7 @@
   .rn[data-rn-prompted]:not([data-rn-started]) .video-controls-center {
     bottom: auto;
     top: calc(50% + 24px);
+    translate: 0 calc(-1 * var(--rn-lift, 0px));
   }
 
   /* Its key is Enter, drawn as a keycap that reads on the paper key. */
@@ -2653,6 +2655,304 @@
   .rn[data-rn-short][data-rn-comparing]:not([data-rn-pad]) .video-controls-bottom {
     opacity: 0;
     pointer-events: none;
+  }
+
+  /* ---- Checkpoint (checkpoint.ts): a pause, kept as a context window ------------------------------------------- */
+
+  /* Stopped mid-run, the picture becomes the run's context window: the frame it stopped on in the middle, framed in
+     brass, the moments either side of it beside it, smaller and dimmer the further they are. Over them where the run
+     is, under them the line said there and the keys. The plan and the top keys step away meanwhile. */
+  .rn rn-checkpoint {
+    position: absolute;
+    inset: 0 0 var(--rn-checkpoint-foot, 0px);
+    z-index: 3;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 16px 20px 12px;
+    background: color-mix(in srgb, var(--rn-ink) 94%, transparent);
+    pointer-events: auto;
+    visibility: visible;
+    opacity: 1;
+    /* The row's far frames run past the picture's edges: cut there, never widening the page, and never a box that
+       scrolls (a focus or a click scrolling into view would slide the row out of place). */
+    overflow: clip;
+  }
+
+  .rn rn-checkpoint[hidden] {
+    display: none;
+  }
+
+  .rn[data-rn-checkpointing] :is(rn-plan, rn-peek, .video-controls-top) {
+    visibility: hidden;
+  }
+
+  .rn .rn-checkpoint-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: center;
+    column-gap: 16px;
+    row-gap: 2px;
+    text-align: center;
+  }
+
+  .rn .rn-checkpoint-kicker,
+  .rn .rn-checkpoint-step {
+    margin: 0;
+  }
+
+  .rn .rn-checkpoint-kicker {
+    font-family: var(--rn-mono);
+    font-size: var(--rn-size-label);
+    color: var(--rn-text);
+    white-space: nowrap;
+  }
+
+  .rn .rn-checkpoint-word {
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--rn-signal-own);
+  }
+
+  .rn .rn-checkpoint-step {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .rn .rn-checkpoint-title {
+    font-family: var(--rn-serif);
+    font-size: 24px;
+    line-height: 1.1;
+    color: var(--rn-text);
+  }
+
+  .rn .rn-checkpoint-into {
+    font-family: var(--rn-mono);
+    font-size: var(--rn-size-small);
+    color: var(--rn-text-2);
+  }
+
+  /* The row: one control, a slider through time. */
+  .rn .rn-checkpoint-rail {
+    position: relative;
+    min-height: 0;
+    border-radius: var(--rn-r-control);
+    touch-action: pan-y;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .rn .rn-checkpoint-rail:focus-visible {
+    outline: 2px solid var(--rn-signal-own);
+    outline-offset: 2px;
+  }
+
+  .rn .rn-checkpoint-frame {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: var(--rn-frame-w, 40%);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    cursor: pointer;
+  }
+
+  .rn .rn-checkpoint-frame[data-now] {
+    cursor: default;
+  }
+
+  .rn .rn-checkpoint-pic {
+    position: relative;
+    display: block;
+    opacity: var(--rn-dim, 1);
+    transition: opacity var(--rn-slow) var(--rn-ease);
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: var(--rn-ink-3);
+    border: 1px solid var(--rn-hairline);
+    border-radius: var(--rn-r-mark);
+  }
+
+  .rn .rn-checkpoint-pic :is(img, canvas) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .rn .rn-checkpoint-pic img {
+    opacity: 0;
+    transition: opacity var(--rn-fast) var(--rn-ease);
+  }
+
+  .rn .rn-checkpoint-frame[data-in] .rn-checkpoint-pic img {
+    opacity: 1;
+  }
+
+  /* Beside the stop, a frame whose picture has not come yet is not there at all, rather than an empty box. */
+  .rn .rn-checkpoint-frame:not([data-now], [data-in]) {
+    visibility: hidden;
+  }
+
+  .rn .rn-checkpoint-frame[data-now] .rn-checkpoint-pic {
+    border-color: var(--rn-signal-own);
+    box-shadow: 0 0 0 1px var(--rn-signal-own), 0 28px 70px -30px rgb(0 0 0 / 0.9), 0 0 48px -12px color-mix(in srgb, var(--rn-signal-own) 40%, transparent);
+  }
+
+  /* The stop's corners, brass, standing off its frame: the only corners on the screen. */
+  .rn .rn-checkpoint-frame[data-now]::before {
+    content: "";
+    position: absolute;
+    inset: -9px -9px auto;
+    aspect-ratio: auto;
+    height: calc(var(--rn-frame-w, 40%) * 9 / 16 + 18px);
+    pointer-events: none;
+    --c: var(--rn-signal-own);
+    background:
+      linear-gradient(var(--c), var(--c)) left top / 16px 2px no-repeat,
+      linear-gradient(var(--c), var(--c)) left top / 2px 16px no-repeat,
+      linear-gradient(var(--c), var(--c)) right top / 16px 2px no-repeat,
+      linear-gradient(var(--c), var(--c)) right top / 2px 16px no-repeat,
+      linear-gradient(var(--c), var(--c)) left bottom / 16px 2px no-repeat,
+      linear-gradient(var(--c), var(--c)) left bottom / 2px 16px no-repeat,
+      linear-gradient(var(--c), var(--c)) right bottom / 16px 2px no-repeat,
+      linear-gradient(var(--c), var(--c)) right bottom / 2px 16px no-repeat;
+  }
+
+  /* Each frame's time, the same size at every distance (the frame is scaled, its words are not). */
+  .rn .rn-checkpoint-at {
+    font-family: var(--rn-mono);
+    font-size: calc(var(--rn-size-small) / var(--rn-s, 1));
+    line-height: 1.2;
+    text-align: center;
+    color: var(--rn-text-3);
+    white-space: nowrap;
+  }
+
+  .rn .rn-checkpoint-frame[data-now] .rn-checkpoint-at {
+    color: var(--rn-signal-own);
+  }
+
+  .rn .rn-checkpoint-frame[data-far] .rn-checkpoint-at {
+    visibility: hidden;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .rn .rn-checkpoint-frame:not([data-now]):hover .rn-checkpoint-pic {
+      border-color: var(--rn-text-3);
+    }
+  }
+
+  .rn .rn-checkpoint-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .rn .rn-checkpoint-line {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-family: var(--rn-serif);
+    font-style: italic;
+    font-size: 18px;
+    line-height: 1.3;
+    color: var(--rn-text-2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .rn .rn-checkpoint-keys {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: none;
+  }
+
+  .rn .rn-checkpoint-hint {
+    margin-inline-end: 10px;
+    font-family: var(--rn-mono);
+    font-size: var(--rn-size-small);
+    color: var(--rn-text-3);
+  }
+
+  @media (hover: none), (pointer: coarse) {
+    .rn .rn-checkpoint-hint {
+      display: none;
+    }
+  }
+
+  .rn .rn-checkpoint-key {
+    width: auto;
+    height: var(--rn-key);
+    padding-inline: 8px 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--rn-size-small);
+    color: var(--rn-text);
+  }
+
+  .rn .rn-checkpoint-key svg {
+    width: 16px;
+    height: 16px;
+    flex: none;
+  }
+
+  /* A narrow player: the head says only where, the keys join it at the top, and the row has the rest. */
+  @container media-root (width < 30rem) {
+    .rn rn-checkpoint {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-rows: auto minmax(0, 1fr);
+      grid-template-areas: "head keys" "rail rail";
+      gap: 4px 8px;
+      padding: 6px 8px 8px 14px;
+    }
+
+    .rn .rn-checkpoint-head {
+      grid-area: head;
+      justify-content: flex-start;
+      align-self: center;
+    }
+
+    .rn .rn-checkpoint-step,
+    .rn .rn-checkpoint-line {
+      display: none;
+    }
+
+    .rn .rn-checkpoint-rail {
+      grid-area: rail;
+    }
+
+    .rn .rn-checkpoint-foot {
+      display: contents;
+    }
+
+    .rn .rn-checkpoint-keys {
+      grid-area: keys;
+    }
+
+    .rn .rn-checkpoint-key {
+      width: var(--rn-key);
+      padding: 0;
+      justify-content: center;
+    }
+
+    .rn .rn-checkpoint-key-word {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
   }
 
   /* ---- The pad (data-rn-pad, run.ts): a phone's player in the page ------------------------------------------- */

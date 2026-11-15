@@ -61,9 +61,12 @@ export async function parkPointer(page: Page): Promise<void> {
 
 /**
  * Runs the film with a real Space from the page, pauses it from script, holds it on `time` with that frame painted,
- * and waits until the log line has been written and nothing is mid-transition.
+ * and waits until the log line has been written and nothing is mid-transition. No checkpoint is kept for the pause.
  */
 export async function holdAt(page: Page, time: number): Promise<void> {
+  // Held to measure the bar and the plan over the film's own frame, the pause keeps no checkpoint (its context window
+  // would cover the frame); checkpoint.spec.ts measures that window itself.
+  await page.evaluate(() => document.querySelector('media-container')?.setAttribute('data-rn-checkpoint', 'off'));
   await page.keyboard.press('Space');
   await page.waitForFunction(() => {
     const video = document.querySelector('video') as HTMLVideoElement;
